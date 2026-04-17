@@ -1,0 +1,1274 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>d11.me — My Bookmarks</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        g: { blue: '#4285F4', black: '#1F1F1F', gray: '#474747', border: '#E3E3E3', surface: '#FFFFFF' }
+                    },
+                    fontFamily: { sans: ['Inter', 'Roboto', 'sans-serif'] },
+                    boxShadow: { soft: '0 4px 6px -1px rgba(0,0,0,0.1),0 2px 4px -1px rgba(0,0,0,0.06)' }
+                }
+            }
+        }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        [x-cloak] {
+            display: none !important;
+        }
+
+        .fade-in {
+            animation: fadeIn .15s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(4px);
+            }
+
+            to {
+                opacity: 1;
+                transform: none;
+            }
+        }
+
+        .spinner {
+            border: 2px solid #E3E3E3;
+            border-top-color: #4285F4;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            animation: spin .7s linear infinite;
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-[#FAFAFA] font-sans text-g-black antialiased min-h-screen">
+
+    <!-- ═══════════════════════════════════════════════════════════════════════════
+     LOGIN VIEW
+═══════════════════════════════════════════════════════════════════════════ -->
+    <div id="view-login" class="hidden min-h-screen flex items-center justify-center px-4">
+        <div class="w-full max-w-md">
+            <div class="text-center mb-10">
+                <a href="/" class="text-3xl font-bold tracking-tight">
+                    <span class="text-g-blue">d11</span><span class="text-g-black">.me</span>
+                </a>
+                <p class="text-g-gray text-sm mt-2">Smart Bookmarks &amp; Short Links</p>
+            </div>
+
+            <div class="bg-white border border-g-border rounded-[24px] p-8 shadow-soft">
+                <!-- Tab switcher -->
+                <div class="flex rounded-full bg-[#F3F4F6] p-1 mb-8">
+                    <button id="tab-login" onclick="switchTab('login')"
+                        class="flex-1 text-sm font-semibold py-2 rounded-full bg-white shadow-soft text-g-black transition-all">
+                        Sign In
+                    </button>
+                    <button id="tab-register" onclick="switchTab('register')"
+                        class="flex-1 text-sm font-semibold py-2 rounded-full text-g-gray transition-all">
+                        Create Account
+                    </button>
+                </div>
+
+                <!-- ── Sign In panel ── -->
+                <div id="panel-login">
+                    <p class="text-g-gray text-sm mb-6 leading-relaxed">
+                        Paste your API token below to sign in. Your token was shown when you registered.
+                    </p>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-g-gray mb-1.5 uppercase tracking-wide">API
+                                Token</label>
+                            <input id="login-token" type="password" placeholder="Paste your token here…"
+                                class="w-full border border-g-border rounded-[12px] px-4 py-3 text-sm focus:outline-none focus:border-g-blue transition-colors"
+                                onkeydown="if(event.key==='Enter') doLogin()">
+                        </div>
+                        <div id="login-error"
+                            class="hidden text-red-500 text-xs bg-red-50 border border-red-100 rounded-[8px] px-3 py-2">
+                        </div>
+                        <button onclick="doLogin()"
+                            class="w-full bg-g-blue text-white font-semibold py-3 rounded-full hover:bg-blue-600 transition-all flex items-center justify-center gap-2">
+                            <span id="login-btn-text">Sign In</span>
+                            <span id="login-spinner"
+                                class="hidden spinner !border-2 !border-white/40 !border-t-white"></span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ── Register panel ── -->
+                <div id="panel-register" class="hidden space-y-4">
+                    <p class="text-g-gray text-sm mb-2 leading-relaxed">
+                        Choose a handle for your short links. e.g. handle <strong>doug</strong> → <span
+                            class="text-g-blue font-mono">d11.me/l/doug/cowboys</span>
+                    </p>
+                    <div>
+                        <label class="block text-xs font-semibold text-g-gray mb-1.5 uppercase tracking-wide">Handle /
+                            Prefix <span class="text-red-400">*</span></label>
+                        <input id="reg-prefix" type="text" placeholder="e.g. doug"
+                            class="w-full border border-g-border rounded-[12px] px-4 py-3 text-sm focus:outline-none focus:border-g-blue transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-g-gray mb-1.5 uppercase tracking-wide">Full
+                            Name</label>
+                        <input id="reg-name" type="text" placeholder="Your name"
+                            class="w-full border border-g-border rounded-[12px] px-4 py-3 text-sm focus:outline-none focus:border-g-blue transition-colors">
+                    </div>
+                    <div>
+                        <label
+                            class="block text-xs font-semibold text-g-gray mb-1.5 uppercase tracking-wide">Email</label>
+                        <input id="reg-email" type="email" placeholder="you@example.com"
+                            class="w-full border border-g-border rounded-[12px] px-4 py-3 text-sm focus:outline-none focus:border-g-blue transition-colors">
+                    </div>
+                    <div id="reg-error"
+                        class="hidden text-red-500 text-xs bg-red-50 border border-red-100 rounded-[8px] px-3 py-2">
+                    </div>
+                    <button onclick="doRegister()"
+                        class="w-full bg-g-blue text-white font-semibold py-3 rounded-full hover:bg-blue-600 transition-all flex items-center justify-center gap-2">
+                        <span id="reg-btn-text">Create Account</span>
+                        <span id="reg-spinner" class="hidden spinner !border-2 !border-white/40 !border-t-white"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Token reveal modal (shown once after register) -->
+    <div id="token-modal"
+        class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center px-4">
+        <div class="bg-white rounded-[24px] p-8 max-w-lg w-full shadow-soft fade-in">
+            <div class="w-12 h-12 bg-green-100 rounded-[12px] flex items-center justify-center mb-4">
+                <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+            </div>
+            <h3 class="text-xl font-semibold text-g-black mb-2">Account Created!</h3>
+            <p class="text-g-gray text-sm mb-4 leading-relaxed">
+                Your API token is shown <strong>once only</strong>. Copy and save it somewhere safe — you'll need it to
+                sign in.
+            </p>
+            <div class="bg-[#F3F4F6] rounded-[12px] p-4 font-mono text-sm break-all text-g-black mb-4 select-all"
+                id="token-display"></div>
+            <button onclick="copyToken()"
+                class="w-full border border-g-border text-g-black font-medium py-2.5 rounded-full hover:border-g-blue hover:text-g-blue transition-all mb-3 text-sm flex items-center justify-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+                Copy Token
+            </button>
+            <button onclick="dismissTokenModal()"
+                class="w-full bg-g-blue text-white font-semibold py-3 rounded-full hover:bg-blue-600 transition-all text-sm">
+                I've saved it — Go to Dashboard
+            </button>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════════
+     DASHBOARD VIEW
+═══════════════════════════════════════════════════════════════════════════ -->
+    <div id="view-dashboard" class="hidden min-h-screen flex flex-col">
+
+        <!-- ── Top nav ── -->
+        <header class="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-g-border">
+            <div class="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between gap-4">
+                <a href="/" class="text-xl font-bold tracking-tight flex-shrink-0">
+                    <span class="text-g-blue">d11</span><span class="text-g-black">.me</span>
+                </a>
+                <!-- Search -->
+                <div class="flex-1 max-w-lg relative">
+                    <svg class="w-4 h-4 text-g-gray absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <input id="search-input" type="text" placeholder="Search bookmarks…"
+                        class="w-full pl-10 pr-4 py-2 text-sm border border-g-border rounded-full focus:outline-none focus:border-g-blue transition-colors bg-[#FAFAFA]"
+                        oninput="debounceSearch(this.value)">
+                </div>
+                <!-- User + actions -->
+                <div class="flex items-center gap-3 flex-shrink-0">
+                    <button onclick="openAddModal()"
+                        class="bg-g-blue text-white text-sm font-semibold px-4 py-2 rounded-full hover:bg-blue-600 transition-all flex items-center gap-1.5">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        Add
+                    </button>
+                    <div class="relative">
+                        <button onclick="toggleUserMenu()"
+                            class="flex items-center gap-2 text-sm text-g-gray hover:text-g-black transition-colors">
+                            <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-g-blue font-bold text-xs"
+                                id="user-avatar">?</div>
+                        </button>
+                        <div id="user-menu"
+                            class="hidden absolute right-0 top-10 bg-white border border-g-border rounded-[12px] shadow-soft w-48 py-1 z-50 fade-in">
+                            <div class="px-4 py-2 border-b border-g-border">
+                                <p class="text-xs font-semibold text-g-black truncate" id="menu-name">—</p>
+                                <p class="text-xs text-g-gray truncate" id="menu-prefix">—</p>
+                            </div>
+                            <button onclick="doLogout()"
+                                class="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50 transition-colors">Sign
+                                Out</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- ── Body: sidebar + main ── -->
+        <div class="flex-1 max-w-7xl mx-auto w-full px-6 py-6 flex gap-6">
+
+            <!-- Sidebar: tags -->
+            <aside class="hidden lg:flex flex-col w-52 flex-shrink-0 gap-2">
+                <p class="text-xs font-semibold text-g-gray uppercase tracking-widest mb-1">Filter by Tag</p>
+                <button onclick="filterByTag(null)" id="tag-all"
+                    class="text-left text-sm px-3 py-2 rounded-[8px] font-medium bg-g-blue text-white transition-colors">
+                    All
+                </button>
+                <div id="tag-list" class="flex flex-col gap-1"></div>
+                <div class="mt-4 border-t border-g-border pt-4">
+                    <label class="flex items-center gap-2 text-sm text-g-gray cursor-pointer select-none">
+                        <input type="checkbox" id="show-archived" onchange="loadBookmarks()"
+                            class="rounded accent-g-blue">
+                        Show archived
+                    </label>
+                </div>
+
+                <!-- Bookmarklet -->
+                <div class="mt-4 border-t border-g-border pt-4">
+                    <p class="text-xs font-semibold text-g-gray uppercase tracking-widest mb-2">Bookmarklet</p>
+                    <p class="text-xs text-g-gray mb-2 leading-relaxed">Drag this to your bookmarks bar to save any page
+                        in one click:</p>
+                    <a id="bookmarklet-link" href="#" onclick="return false" draggable="true"
+                        title="Drag to bookmarks bar"
+                        class="inline-flex items-center gap-1.5 bg-g-blue text-white text-xs font-semibold px-3 py-1.5 rounded-full shadow-sm hover:bg-blue-600 cursor-grab active:cursor-grabbing select-none transition-colors">
+                        <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                        </svg>
+                        + d11.me
+                    </a>
+                    <p class="text-xs text-g-gray mt-2 leading-relaxed">Or copy the snippet and create it manually in
+                        your browser.</p>
+                    <button onclick="copyBookmarklet()"
+                        class="mt-1.5 text-xs text-g-blue hover:underline focus:outline-none">Copy snippet</button>
+                </div>
+            </aside>
+
+            <!-- Main content -->
+            <main class="flex-1 min-w-0">
+                <!-- Toolbar row -->
+                <div class="flex items-center justify-between mb-4 gap-4">
+                    <div class="flex items-center gap-2">
+                        <span id="total-count" class="text-sm text-g-gray"></span>
+                        <span id="active-tag-badge"
+                            class="hidden bg-blue-50 text-g-blue text-xs font-medium px-3 py-1 rounded-full border border-blue-100 items-center gap-1">
+                            <span id="active-tag-label"></span>
+                            <button onclick="filterByTag(null)" class="ml-1 hover:text-blue-700">&times;</button>
+                        </span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <select id="sort-select" onchange="loadBookmarks()"
+                            class="text-xs border border-g-border rounded-full px-3 py-1.5 text-g-gray focus:outline-none focus:border-g-blue bg-white">
+                            <option value="created_at">Newest first</option>
+                            <option value="title">Title A–Z</option>
+                            <option value="hit_count">Most visited</option>
+                            <option value="last_accessed">Last accessed</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Loading state -->
+                <div id="list-loading" class="hidden flex items-center justify-center py-20">
+                    <div class="spinner !w-8 !h-8"></div>
+                </div>
+
+                <!-- Empty state -->
+                <div id="list-empty" class="hidden text-center py-20">
+                    <div class="w-16 h-16 bg-blue-50 rounded-[16px] flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-8 h-8 text-g-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                        </svg>
+                    </div>
+                    <p class="font-semibold text-g-black mb-1">No bookmarks yet</p>
+                    <p class="text-sm text-g-gray mb-6">Save your first link to get started.</p>
+                    <button onclick="openAddModal()"
+                        class="bg-g-blue text-white text-sm font-semibold px-6 py-2.5 rounded-full hover:bg-blue-600 transition-all inline-flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        Add Bookmark
+                    </button>
+                </div>
+
+                <!-- Bookmark list -->
+                <div id="bookmark-list" class="space-y-2.5"></div>
+
+                <!-- Pagination -->
+                <div id="pagination" class="hidden mt-6 flex items-center justify-center gap-2"></div>
+            </main>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════════
+     ADD / EDIT MODAL  (built in Step 6 — placeholder shown)
+═══════════════════════════════════════════════════════════════════════════ -->
+    <div id="bookmark-modal"
+        class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center px-4"
+        onclick="handleModalBackdrop(event)">
+        <div class="bg-white rounded-[24px] shadow-soft fade-in w-full max-w-lg max-h-[90vh] flex flex-col"
+            id="modal-inner">
+
+            <!-- Modal header -->
+            <div class="flex items-center justify-between px-8 pt-7 pb-4 border-b border-g-border flex-shrink-0">
+                <h2 id="modal-title" class="text-lg font-semibold text-g-black">Add Bookmark</h2>
+                <button onclick="closeModal()" class="text-g-gray hover:text-g-black transition-colors p-1 -mr-1">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Modal body (scrollable) -->
+            <div class="overflow-y-auto flex-1 px-8 py-5 space-y-4">
+
+                <!-- URL -->
+                <div>
+                    <label class="block text-xs font-semibold text-g-gray mb-1.5 uppercase tracking-wide">URL <span
+                            class="text-red-400">*</span></label>
+                    <div class="flex gap-2">
+                        <input id="m-url" type="url" placeholder="https://example.com"
+                            class="flex-1 border border-g-border rounded-[12px] px-4 py-2.5 text-sm focus:outline-none focus:border-g-blue transition-colors"
+                            oninput="debouncePreview(this.value)">
+                        <button onclick="fetchPreview()" title="Auto-fill from URL"
+                            class="flex-shrink-0 border border-g-border rounded-[12px] px-3 py-2.5 text-g-gray hover:border-g-blue hover:text-g-blue transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                        </button>
+                    </div>
+                    <p id="m-url-error" class="hidden text-red-500 text-xs mt-1"></p>
+                </div>
+
+                <!-- Short link slug -->
+                <div>
+                    <label class="block text-xs font-semibold text-g-gray mb-1.5 uppercase tracking-wide">Short Link
+                        Slug <span class="text-red-400">*</span></label>
+                    <div class="flex items-center gap-2">
+                        <div class="relative flex-1">
+                            <input id="m-slug" type="text" placeholder="e.g. cowboys"
+                                class="w-full border border-g-border rounded-[12px] px-4 py-2.5 text-sm focus:outline-none focus:border-g-blue transition-colors"
+                                oninput="debounceSlugCheck(this.value)">
+                            <span id="slug-status"
+                                class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium"></span>
+                        </div>
+                    </div>
+                    <p class="text-xs text-g-gray mt-1">d11.me/l/<span id="slug-prefix-hint"
+                            class="font-medium"></span>/<span id="slug-live" class="text-g-blue font-mono">…</span></p>
+                    <p id="m-slug-error" class="hidden text-red-500 text-xs mt-1"></p>
+                </div>
+
+                <!-- Title -->
+                <div>
+                    <label class="block text-xs font-semibold text-g-gray mb-1.5 uppercase tracking-wide">Title</label>
+                    <input id="m-title" type="text" placeholder="Page title (auto-filled from URL)"
+                        class="w-full border border-g-border rounded-[12px] px-4 py-2.5 text-sm focus:outline-none focus:border-g-blue transition-colors">
+                </div>
+
+                <!-- Description -->
+                <div>
+                    <label
+                        class="block text-xs font-semibold text-g-gray mb-1.5 uppercase tracking-wide">Description</label>
+                    <textarea id="m-desc" rows="2" placeholder="Notes or summary…"
+                        class="w-full border border-g-border rounded-[12px] px-4 py-2.5 text-sm focus:outline-none focus:border-g-blue transition-colors resize-none"></textarea>
+                </div>
+
+                <!-- Tags -->
+                <div>
+                    <label class="block text-xs font-semibold text-g-gray mb-1.5 uppercase tracking-wide">Tags</label>
+                    <div class="flex flex-wrap gap-1.5 mb-2" id="tag-chips"></div>
+                    <div class="flex gap-2">
+                        <input id="m-tag-input" type="text" placeholder="Add a tag and press Enter or comma"
+                            list="tag-datalist"
+                            class="flex-1 border border-g-border rounded-[12px] px-4 py-2.5 text-sm focus:outline-none focus:border-g-blue transition-colors"
+                            onkeydown="handleTagKey(event)">
+                        <datalist id="tag-datalist"></datalist>
+                        <button onclick="addTagFromInput()"
+                            class="flex-shrink-0 border border-g-border rounded-[12px] px-4 py-2.5 text-sm text-g-gray hover:border-g-blue hover:text-g-blue transition-colors">Add</button>
+                    </div>
+                </div>
+
+                <!-- Public toggle + Expiry -->
+                <div class="flex items-start gap-6">
+                    <div class="flex-1">
+                        <label
+                            class="block text-xs font-semibold text-g-gray mb-1.5 uppercase tracking-wide">Visibility</label>
+                        <button id="m-public-btn" onclick="toggleModalPublic()"
+                            class="flex items-center gap-2 border border-g-border rounded-full px-4 py-2 text-sm font-medium text-g-gray hover:border-g-blue transition-colors">
+                            <span id="m-public-icon">🔒</span>
+                            <span id="m-public-label">Private</span>
+                        </button>
+                    </div>
+                    <div class="flex-1">
+                        <label class="block text-xs font-semibold text-g-gray mb-1.5 uppercase tracking-wide">Expires
+                            (optional)</label>
+                        <input id="m-expires" type="date"
+                            class="w-full border border-g-border rounded-[12px] px-4 py-2.5 text-sm focus:outline-none focus:border-g-blue transition-colors">
+                    </div>
+                </div>
+
+                <div id="m-form-error"
+                    class="hidden text-red-500 text-xs bg-red-50 border border-red-100 rounded-[8px] px-3 py-2"></div>
+            </div>
+
+            <!-- Modal footer -->
+            <div class="flex gap-3 px-8 py-5 border-t border-g-border flex-shrink-0">
+                <button onclick="closeModal()"
+                    class="flex-1 border border-g-border text-g-black text-sm font-medium py-2.5 rounded-full hover:border-g-blue transition-all">Cancel</button>
+                <button id="m-submit" onclick="submitModal()"
+                    class="flex-1 bg-g-blue text-white text-sm font-semibold py-2.5 rounded-full hover:bg-blue-600 transition-all flex items-center justify-center gap-2">
+                    <span id="m-submit-text">Save Bookmark</span>
+                    <span id="m-submit-spinner"
+                        class="hidden spinner !border-2 !border-white/40 !border-t-white"></span>
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════════
+     TOAST
+═══════════════════════════════════════════════════════════════════════════ -->
+    <div id="toast"
+        class="hidden fixed bottom-6 right-6 z-50 bg-g-black text-white text-sm font-medium px-5 py-3 rounded-full shadow-soft fade-in max-w-sm">
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════════
+     CONFIRM DIALOG
+═══════════════════════════════════════════════════════════════════════════ -->
+    <div id="confirm-dialog"
+        class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center px-4">
+        <div class="bg-white rounded-[24px] p-6 max-w-sm w-full shadow-soft fade-in text-center">
+            <p class="font-semibold text-g-black mb-1" id="confirm-title">Are you sure?</p>
+            <p class="text-sm text-g-gray mb-6" id="confirm-body"></p>
+            <div class="flex gap-3">
+                <button onclick="confirmResolve(false)"
+                    class="flex-1 border border-g-border text-g-black text-sm font-medium py-2.5 rounded-full hover:border-g-blue transition-all">Cancel</button>
+                <button onclick="confirmResolve(true)"
+                    class="flex-1 bg-red-500 text-white text-sm font-semibold py-2.5 rounded-full hover:bg-red-600 transition-all"
+                    id="confirm-ok">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════════
+     APP SCRIPT
+═══════════════════════════════════════════════════════════════════════════ -->
+    <script>
+        // ── State ────────────────────────────────────────────────────────────────────
+        const S = {
+            token: null,
+            user: null,
+            bookmarks: [],
+            tags: [],
+            page: 1,
+            perPage: 25,
+            total: 0,
+            sort: 'created_at',
+            activeTag: null,
+            searchQuery: '',
+            searchTimer: null,
+            confirmCb: null,
+            newToken: null,      // stored temporarily after register
+        }
+
+        // ── Bootstrap ────────────────────────────────────────────────────────────────
+        async function boot() {
+            S.token = localStorage.getItem('d11_token')
+
+            // Pre-fill from ?url= query param (bookmarklet)
+            const params = new URLSearchParams(location.search)
+            const preUrl = params.get('url')
+            const preTitle = params.get('title')
+
+            if (!S.token) {
+                show('view-login')
+                if (preUrl) { S._preUrl = preUrl; S._preTitle = preTitle }
+                return
+            }
+
+            const ok = await validateToken()
+            if (!ok) { show('view-login'); return }
+
+            show('view-dashboard')
+            initBookmarklet()
+            await Promise.all([loadBookmarks(), loadTags()])
+
+            if (preUrl) {
+                openAddModal(preUrl, preTitle)
+            }
+        }
+
+        // ── Auth helpers ─────────────────────────────────────────────────────────────
+        async function validateToken() {
+            try {
+                const res = await api('GET', '/api/auth/me')
+                if (!res.ok) return false
+                S.user = await res.json()
+                updateUserUI()
+                return true
+            } catch { return false }
+        }
+
+        function updateUserUI() {
+            if (!S.user) return
+            const initials = (S.user.full_name || S.user.slug_prefix || '?').slice(0, 2).toUpperCase()
+            qs('#user-avatar').textContent = initials
+            qs('#menu-name').textContent = S.user.full_name || S.user.slug_prefix
+            qs('#menu-prefix').textContent = 'd11.me/l/' + S.user.slug_prefix + '/…'
+        }
+
+        function doLogout() {
+            localStorage.removeItem('d11_token')
+            S.token = null; S.user = null
+            location.reload()
+        }
+
+        async function doLogin() {
+            const token = qs('#login-token').value.trim()
+            if (!token) return
+            setBusy('login', true)
+            hideEl('login-error')
+            S.token = token
+            const ok = await validateToken()
+            if (!ok) {
+                S.token = null
+                showEl('login-error')
+                qs('#login-error').textContent = 'Invalid token. Please check and try again.'
+                setBusy('login', false)
+                return
+            }
+            localStorage.setItem('d11_token', token)
+            setBusy('login', false)
+            show('view-dashboard')
+            initBookmarklet()
+            await Promise.all([loadBookmarks(), loadTags()])
+        }
+
+        async function doRegister() {
+            const prefix = qs('#reg-prefix').value.trim().toLowerCase()
+            const fullName = qs('#reg-name').value.trim()
+            const email = qs('#reg-email').value.trim()
+            if (!prefix) { showError('reg-error', 'Handle is required.'); return }
+            setBusy('reg', true)
+            hideEl('reg-error')
+            try {
+                const res = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ slug_prefix: prefix, full_name: fullName || undefined, email: email || undefined })
+                })
+                const data = await res.json()
+                if (!res.ok) { showError('reg-error', data.error || 'Registration failed.'); setBusy('reg', false); return }
+                S.newToken = data.token
+                S.token = data.token
+                S.user = data.user
+                localStorage.setItem('d11_token', data.token)
+                qs('#token-display').textContent = data.token
+                showEl('token-modal')
+            } catch { showError('reg-error', 'Network error. Try again.') }
+            setBusy('reg', false)
+        }
+
+        function copyToken() {
+            navigator.clipboard.writeText(qs('#token-display').textContent)
+            toast('Token copied to clipboard!')
+        }
+
+        async function dismissTokenModal() {
+            hideEl('token-modal')
+            show('view-dashboard')
+            initBookmarklet()
+            updateUserUI()
+            await Promise.all([loadBookmarks(), loadTags()])
+        }
+
+        // ── Bookmarks ─────────────────────────────────────────────────────────────────
+        async function loadBookmarks(page = 1) {
+            S.page = page
+            showEl('list-loading')
+            hideEl('bookmark-list')
+            hideEl('list-empty')
+            hideEl('pagination')
+
+            const params = new URLSearchParams({
+                sort: qs('#sort-select')?.value || 'created_at',
+                order: 'DESC',
+                page: String(page),
+                per_page: String(S.perPage),
+                archived: qs('#show-archived')?.checked ? '1' : '0',
+            })
+            if (S.activeTag) params.set('tag', S.activeTag)
+            if (S.searchQuery) params.set('search', S.searchQuery)
+
+            const res = await api('GET', `/api/bookmarks?${params}`)
+            hideEl('list-loading')
+            if (!res.ok) { toast('Failed to load bookmarks.', 'error'); return }
+
+            const { data, meta } = await res.json()
+            S.bookmarks = data
+            S.total = meta.total
+
+            qs('#total-count').textContent = `${meta.total} bookmark${meta.total !== 1 ? 's' : ''}`
+
+            if (data.length === 0) { showEl('list-empty'); return }
+
+            showEl('bookmark-list')
+            qs('#bookmark-list').innerHTML = data.map(renderBookmarkRow).join('')
+            renderPagination(meta)
+        }
+
+        async function loadTags() {
+            const res = await api('GET', '/api/bookmarks/tags/all')
+            if (!res.ok) return
+            const { data } = await res.json()
+            S.tags = data
+            renderTagSidebar(data)
+        }
+
+        function renderTagSidebar(tags) {
+            const container = qs('#tag-list')
+            container.innerHTML = tags.map(t => `
+    <button onclick="filterByTag('${escAttr(t)}')"
+      data-tag="${escAttr(t)}"
+      class="text-left text-sm px-3 py-2 rounded-[8px] text-g-gray hover:bg-[#F3F4F6] transition-colors font-medium">
+      #${escHtml(t)}
+    </button>`).join('')
+        }
+
+        function filterByTag(tag) {
+            S.activeTag = tag
+            S.page = 1
+
+            // Update sidebar highlight
+            qs('#tag-all').className = tag === null
+                ? 'text-left text-sm px-3 py-2 rounded-[8px] font-medium bg-g-blue text-white transition-colors'
+                : 'text-left text-sm px-3 py-2 rounded-[8px] font-medium text-g-gray hover:bg-[#F3F4F6] transition-colors'
+
+            document.querySelectorAll('[data-tag]').forEach(el => {
+                el.className = el.dataset.tag === tag
+                    ? 'text-left text-sm px-3 py-2 rounded-[8px] font-medium bg-g-blue text-white transition-colors'
+                    : 'text-left text-sm px-3 py-2 rounded-[8px] text-g-gray hover:bg-[#F3F4F6] transition-colors font-medium'
+            })
+
+            // Active badge
+            if (tag) {
+                qs('#active-tag-label').textContent = '#' + tag
+                qs('#active-tag-badge').classList.remove('hidden')
+                qs('#active-tag-badge').classList.add('inline-flex')
+            } else {
+                qs('#active-tag-badge').classList.add('hidden')
+                qs('#active-tag-badge').classList.remove('inline-flex')
+            }
+            loadBookmarks()
+        }
+
+        function debounceSearch(val) {
+            S.searchQuery = val
+            clearTimeout(S.searchTimer)
+            S.searchTimer = setTimeout(() => loadBookmarks(), 320)
+        }
+
+        function renderBookmarkRow(b) {
+            const tags = (Array.isArray(b.tag_list) ? b.tag_list : []).map(t =>
+                `<span class="bg-[#F3F4F6] text-g-gray text-xs px-2 py-0.5 rounded-full">#${escHtml(t)}</span>`
+            ).join('')
+
+            const pubBadge = b.is_public
+                ? `<span class="bg-green-50 text-green-600 text-xs font-medium px-2 py-0.5 rounded-full border border-green-100">Public</span>`
+                : `<span class="bg-gray-100 text-g-gray text-xs font-medium px-2 py-0.5 rounded-full border border-g-border">Private</span>`
+
+            const archBadge = b.is_archived
+                ? `<span class="bg-yellow-50 text-yellow-600 text-xs font-medium px-2 py-0.5 rounded-full border border-yellow-100">Archived</span>`
+                : ''
+
+            const favicon = b.favicon_url
+                ? `<img src="${escAttr(b.favicon_url)}" class="w-5 h-5 rounded-[4px] object-contain flex-shrink-0" onerror="this.style.display='none'" loading="lazy">`
+                : `<div class="w-5 h-5 bg-blue-100 rounded-[4px] flex-shrink-0 flex items-center justify-center">
+         <svg class="w-3 h-3 text-g-blue" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2v1a1 1 0 102 0V3h4v1a1 1 0 102 0V3a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm9 4a1 1 0 10-2 0 1 1 0 002 0zm-4 0a1 1 0 10-2 0 1 1 0 002 0z" clip-rule="evenodd"/></svg>
+       </div>`
+
+            const shortLink = S.user ? `d11.me/l/${S.user.slug_prefix}/${b.slug}` : `d11.me/l/${b.slug}`
+            const fullShortLink = `${location.origin}/l/${S.user?.slug_prefix}/${b.slug}`
+
+            return `
+  <div class="group flex items-start gap-3 p-4 bg-white border border-g-border rounded-[12px] hover:border-g-blue hover:shadow-soft transition-all fade-in" data-id="${b.id}">
+    <div class="mt-0.5">${favicon}</div>
+    <div class="flex-1 min-w-0">
+      <div class="flex flex-wrap items-center gap-1.5 mb-0.5">
+        <a href="${escAttr(b.url)}" target="_blank" rel="noopener noreferrer"
+          class="text-sm font-semibold text-g-black hover:text-g-blue transition-colors truncate max-w-sm">
+          ${escHtml(b.title || b.url)}
+        </a>
+        ${pubBadge}${archBadge}
+      </div>
+      <div class="flex items-center gap-2 flex-wrap mb-1.5">
+        <button onclick="copyLink('${escAttr(fullShortLink)}')"
+          class="text-g-blue text-xs font-mono hover:underline flex items-center gap-1">
+          ${escHtml(shortLink)}
+        </button>
+        <span class="text-g-border text-xs">·</span>
+        <span class="text-g-gray text-xs truncate max-w-xs">${escHtml(shortDomain(b.url))}</span>
+        ${b.hit_count ? `<span class="text-g-gray text-xs">· ${b.hit_count} click${b.hit_count !== 1 ? 's' : ''}</span>` : ''}
+      </div>
+      ${b.short_description ? `<p class="text-xs text-g-gray leading-relaxed mb-1.5 line-clamp-2">${escHtml(b.short_description)}</p>` : ''}
+      ${tags ? `<div class="flex flex-wrap gap-1">${tags}</div>` : ''}
+    </div>
+
+    <!-- Action buttons (visible on hover) -->
+    <div class="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-0.5">
+      <button title="Copy short link" onclick="copyLink('${escAttr(fullShortLink)}')"
+        class="p-1.5 text-g-gray border border-g-border rounded-[8px] hover:border-g-blue hover:text-g-blue transition-colors">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+        </svg>
+      </button>
+      <button title="Edit" onclick="openEditModal(${b.id})"
+        class="p-1.5 text-g-gray border border-g-border rounded-[8px] hover:border-g-blue hover:text-g-blue transition-colors">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+        </svg>
+      </button>
+      <button title="${b.is_public ? 'Make Private' : 'Make Public'}" onclick="togglePublic(${b.id}, ${b.is_public})"
+        class="p-1.5 text-g-gray border border-g-border rounded-[8px] hover:border-g-blue hover:text-g-blue transition-colors">
+        ${b.is_public
+                    ? `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>`
+                    : `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>`}
+      </button>
+      <button title="Archive" onclick="toggleArchive(${b.id}, ${b.is_archived})"
+        class="p-1.5 text-g-gray border border-g-border rounded-[8px] hover:border-yellow-400 hover:text-yellow-600 transition-colors">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
+        </svg>
+      </button>
+      <button title="Delete" onclick="deleteBookmark(${b.id})"
+        class="p-1.5 text-red-400 border border-red-100 rounded-[8px] hover:bg-red-50 transition-colors">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+        </svg>
+      </button>
+    </div>
+  </div>`
+        }
+
+        function renderPagination(meta) {
+            if (meta.total_pages <= 1) { hideEl('pagination'); return }
+            showEl('pagination')
+            const pag = qs('#pagination')
+            let html = ''
+
+            if (meta.page > 1) {
+                html += `<button onclick="loadBookmarks(${meta.page - 1})" class="px-3 py-1.5 text-sm border border-g-border rounded-full hover:border-g-blue hover:text-g-blue transition-colors">← Prev</button>`
+            }
+
+            const start = Math.max(1, meta.page - 2)
+            const end = Math.min(meta.total_pages, meta.page + 2)
+            for (let i = start; i <= end; i++) {
+                html += `<button onclick="loadBookmarks(${i})"
+      class="w-8 h-8 text-sm rounded-full ${i === meta.page ? 'bg-g-blue text-white' : 'border border-g-border hover:border-g-blue hover:text-g-blue'} transition-colors">
+      ${i}</button>`
+            }
+
+            if (meta.page < meta.total_pages) {
+                html += `<button onclick="loadBookmarks(${meta.page + 1})" class="px-3 py-1.5 text-sm border border-g-border rounded-full hover:border-g-blue hover:text-g-blue transition-colors">Next →</button>`
+            }
+
+            pag.innerHTML = html
+        }
+
+        // ── Bookmark actions ──────────────────────────────────────────────────────────
+        async function togglePublic(id, current) {
+            await api('PATCH', `/api/bookmarks/${id}`, { is_public: !current })
+            await loadBookmarks(S.page)
+            toast(current ? 'Set to private.' : 'Set to public.')
+        }
+
+        async function toggleArchive(id, current) {
+            await api('PATCH', `/api/bookmarks/${id}`, { is_archived: !current })
+            await loadBookmarks(S.page)
+            toast(current ? 'Removed from archive.' : 'Archived.')
+        }
+
+        async function deleteBookmark(id) {
+            const ok = await confirm('Delete this bookmark?', 'This cannot be undone.', 'Delete')
+            if (!ok) return
+            const res = await api('DELETE', `/api/bookmarks/${id}`)
+            if (res.ok) {
+                await Promise.all([loadBookmarks(S.page), loadTags()])
+                toast('Bookmark deleted.')
+            } else {
+                toast('Failed to delete.', 'error')
+            }
+        }
+
+        function copyLink(url) {
+            navigator.clipboard.writeText(url)
+            toast('Short link copied!')
+        }
+
+        // ── Bookmarklet ───────────────────────────────────────────────────────────────
+        function buildBookmarkletHref() {
+            const base = location.origin
+            return `javascript:(function(){window.open('${base}/add?url='+encodeURIComponent(location.href)+'&title='+encodeURIComponent(document.title),'_blank','width=540,height=700,resizable=yes')})();`
+        }
+
+        function initBookmarklet() {
+            const el = document.getElementById('bookmarklet-link')
+            if (el) el.href = buildBookmarkletHref()
+        }
+
+        function copyBookmarklet() {
+            navigator.clipboard.writeText(buildBookmarkletHref())
+            toast('Bookmarklet snippet copied!')
+        }
+        function openAddModal(preUrl, preTitle) {
+            M.mode = 'add'
+            M.isPublic = false
+            M.tags = []
+            M.slugOk = false
+            M.editId = null
+            qs('#modal-title').textContent = 'Add Bookmark'
+            qs('#m-submit-text').textContent = 'Save Bookmark'
+            qs('#m-url').value = preUrl || ''
+            qs('#m-slug').value = ''
+            qs('#m-title').value = preTitle || ''
+            qs('#m-desc').value = ''
+            qs('#m-expires').value = ''
+            qs('#m-url-error').classList.add('hidden')
+            qs('#m-slug-error').classList.add('hidden')
+            qs('#m-form-error').classList.add('hidden')
+            qs('#slug-prefix-hint').textContent = S.user?.slug_prefix || ''
+            qs('#slug-live').textContent = '…'
+            qs('#slug-status').textContent = ''
+            setModalPublicUI(false)
+            renderTagChips()
+            populateTagDatalist()
+            showEl('bookmark-modal')
+            setTimeout(() => qs('#m-url').focus(), 50)
+            if (preUrl) fetchPreview()
+        }
+
+        function openEditModal(id) {
+            const b = S.bookmarks.find(x => x.id === id)
+            if (!b) return
+            M.mode = 'edit'
+            M.editId = b.id
+            M.isPublic = !!b.is_public
+            M.tags = Array.isArray(b.tag_list) ? [...b.tag_list] : []
+            M.slugOk = true   // existing slug is always valid for its owner
+            qs('#modal-title').textContent = 'Edit Bookmark'
+            qs('#m-submit-text').textContent = 'Save Changes'
+            qs('#m-url').value = b.url
+            qs('#m-slug').value = b.slug
+            qs('#m-title').value = b.title || ''
+            qs('#m-desc').value = b.short_description || ''
+            qs('#m-expires').value = b.expires_at ? b.expires_at.slice(0, 10) : ''
+            qs('#m-url-error').classList.add('hidden')
+            qs('#m-slug-error').classList.add('hidden')
+            qs('#m-form-error').classList.add('hidden')
+            qs('#slug-prefix-hint').textContent = S.user?.slug_prefix || ''
+            qs('#slug-live').textContent = b.slug
+            qs('#slug-status').textContent = ''
+            setModalPublicUI(M.isPublic)
+            renderTagChips()
+            populateTagDatalist()
+            showEl('bookmark-modal')
+            setTimeout(() => qs('#m-url').focus(), 50)
+        }
+
+        function closeModal() {
+            hideEl('bookmark-modal')
+        }
+
+        function handleModalBackdrop(e) {
+            if (e.target === qs('#bookmark-modal')) closeModal()
+        }
+
+        // ── Confirm dialog ────────────────────────────────────────────────────────────
+        function confirm(title, body, okLabel = 'Confirm') {
+            return new Promise(resolve => {
+                S.confirmCb = resolve
+                qs('#confirm-title').textContent = title
+                qs('#confirm-body').textContent = body
+                qs('#confirm-ok').textContent = okLabel
+                showEl('confirm-dialog')
+            })
+        }
+
+        function confirmResolve(val) {
+            hideEl('confirm-dialog')
+            if (S.confirmCb) { S.confirmCb(val); S.confirmCb = null }
+        }
+
+        // ── UI helpers ────────────────────────────────────────────────────────────────
+        function show(viewId) {
+            ['view-login', 'view-dashboard'].forEach(id => {
+                const el = qs('#' + id)
+                if (el) el.classList.toggle('hidden', id !== viewId)
+            })
+        }
+
+        function showEl(id) { const el = qs('#' + id); el && el.classList.remove('hidden') }
+        function hideEl(id) { const el = qs('#' + id); el && el.classList.add('hidden') }
+        function qs(sel) { return document.querySelector(sel) }
+
+        function setBusy(prefix, busy) {
+            const btn = qs(`#${prefix}-btn-text`); const spin = qs(`#${prefix}-spinner`)
+            if (btn) btn.classList.toggle('opacity-50', busy)
+            if (spin) spin.classList.toggle('hidden', !busy)
+        }
+
+        function showError(id, msg) {
+            const el = qs('#' + id)
+            if (!el) return
+            el.textContent = msg
+            el.classList.remove('hidden')
+        }
+
+        let toastTimer
+        function toast(msg, type = 'success') {
+            const t = qs('#toast')
+            t.textContent = msg
+            t.className = `fixed bottom-6 right-6 z-50 text-sm font-medium px-5 py-3 rounded-full shadow-soft fade-in max-w-sm ${type === 'error' ? 'bg-red-500 text-white' : type === 'info' ? 'bg-g-blue text-white' : 'bg-g-black text-white'
+                }`
+            t.classList.remove('hidden')
+            clearTimeout(toastTimer)
+            toastTimer = setTimeout(() => t.classList.add('hidden'), 3000)
+        }
+
+        function switchTab(t) {
+            const isLogin = t === 'login'
+            qs('#panel-login').classList.toggle('hidden', !isLogin)
+            qs('#panel-register').classList.toggle('hidden', isLogin)
+            const active = 'flex-1 text-sm font-semibold py-2 rounded-full bg-white shadow-soft text-g-black transition-all'
+            const inactive = 'flex-1 text-sm font-semibold py-2 rounded-full text-g-gray transition-all'
+            qs('#tab-login').className = isLogin ? active : inactive
+            qs('#tab-register').className = isLogin ? inactive : active
+        }
+
+        function toggleUserMenu() {
+            qs('#user-menu').classList.toggle('hidden')
+        }
+
+        function shortDomain(url) {
+            try { return new URL(url).hostname.replace(/^www\./, '') } catch { return url }
+        }
+
+        function escHtml(s) {
+            return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        }
+        function escAttr(s) {
+            return String(s).replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+        }
+
+        // ── API fetch wrapper ─────────────────────────────────────────────────────────
+        function api(method, path, body) {
+            const opts = {
+                method,
+                headers: {
+                    'Authorization': 'Bearer ' + S.token,
+                    ...(body ? { 'Content-Type': 'application/json' } : {}),
+                },
+                ...(body ? { body: JSON.stringify(body) } : {}),
+            }
+            return fetch(path, opts)
+        }
+
+        // ── Close menus on outside click ──────────────────────────────────────────────
+        document.addEventListener('click', e => {
+            const menu = qs('#user-menu')
+            if (menu && !menu.classList.contains('hidden') && !e.target.closest('[onclick="toggleUserMenu()"]') && !menu.contains(e.target)) {
+                menu.classList.add('hidden')
+            }
+        })
+
+        // ── Start ─────────────────────────────────────────────────────────────────────
+        boot()
+    </script>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════════
+         MODAL LOGIC (Step 6)
+    ═══════════════════════════════════════════════════════════════════════════ -->
+    <script>
+        // Modal state
+        const M = {
+            mode: 'add',      // 'add' | 'edit'
+            editId: null,
+            isPublic: false,
+            tags: [],
+            slugOk: false,
+            slugTimer: null,
+            previewTimer: null,
+            _editOrigSlug: null,
+        }
+
+        // ── Slug availability check ───────────────────────────────────────────────
+        function debounceSlugCheck(val) {
+            const slug = val.trim().toLowerCase()
+            qs('#slug-live').textContent = slug || '…'
+            clearTimeout(M.slugTimer)
+            if (!slug) { setSlugStatus('', ''); M.slugOk = false; return }
+            if (!/^[a-z0-9_-]{1,64}$/.test(slug)) {
+                setSlugStatus('✗ invalid characters', 'text-red-500')
+                M.slugOk = false; return
+            }
+            // In edit mode, if slug hasn't changed it's still valid
+            if (M.mode === 'edit') {
+                const orig = (S.bookmarks.find(b => b.id === M.editId) || {}).slug
+                if (slug === orig) { setSlugStatus('✓ current', 'text-g-gray'); M.slugOk = true; return }
+            }
+            setSlugStatus('checking…', 'text-g-gray')
+            M.slugTimer = setTimeout(() => checkSlug(slug), 300)
+        }
+
+        async function checkSlug(slug) {
+            try {
+                const res = await api('GET', `/api/bookmarks/check-slug/availability?q=${encodeURIComponent(slug)}`)
+                const data = await res.json()
+                if (data.available) {
+                    setSlugStatus('✓ available', 'text-green-600')
+                    M.slugOk = true
+                } else {
+                    setSlugStatus('✗ taken', 'text-red-500')
+                    M.slugOk = false
+                }
+            } catch {
+                setSlugStatus('', '')
+                M.slugOk = false
+            }
+        }
+
+        function setSlugStatus(text, cls) {
+            const el = qs('#slug-status')
+            el.textContent = text
+            el.className = `absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium ${cls}`
+        }
+
+        // ── URL preview auto-fill ─────────────────────────────────────────────────
+        function debouncePreview(val) {
+            clearTimeout(M.previewTimer)
+            if (!val) return
+            M.previewTimer = setTimeout(() => fetchPreview(), 800)
+        }
+
+        async function fetchPreview() {
+            const url = qs('#m-url').value.trim()
+            if (!url) return
+            try { new URL(url) } catch { return }
+
+            const prevBtn = qs('#m-url + button') || document.querySelector('[onclick="fetchPreview()"]')
+            if (prevBtn) prevBtn.disabled = true
+
+            try {
+                const res = await api('GET', `/api/bookmarks/preview/fetch?url=${encodeURIComponent(url)}`)
+                if (!res.ok) return
+                const { data } = await res.json()
+                if (data.title && !qs('#m-title').value) qs('#m-title').value = data.title
+                if (data.description && !qs('#m-desc').value) qs('#m-desc').value = data.description
+                // Auto-suggest slug from domain if empty
+                if (!qs('#m-slug').value) {
+                    const suggested = suggestSlug(url)
+                    qs('#m-slug').value = suggested
+                    debounceSlugCheck(suggested)
+                }
+            } catch { /* silent */ } finally {
+                if (prevBtn) prevBtn.disabled = false
+            }
+        }
+
+        function suggestSlug(url) {
+            try {
+                const hostname = new URL(url).hostname.replace(/^www\./, '').replace(/\./g, '-').slice(0, 32)
+                return hostname.replace(/[^a-z0-9_-]/gi, '').toLowerCase()
+            } catch { return '' }
+        }
+
+        // ── Tag management ────────────────────────────────────────────────────────
+        function handleTagKey(e) {
+            if (e.key === 'Enter' || e.key === ',') {
+                e.preventDefault()
+                addTagFromInput()
+            }
+        }
+
+        function addTagFromInput() {
+            const input = qs('#m-tag-input')
+            const val = input.value.trim().toLowerCase().replace(/^#/, '').replace(/[^a-z0-9_-]/g, '')
+            if (!val || M.tags.includes(val)) { input.value = ''; return }
+            M.tags.push(val)
+            input.value = ''
+            renderTagChips()
+        }
+
+        function removeTag(tag) {
+            M.tags = M.tags.filter(t => t !== tag)
+            renderTagChips()
+        }
+
+        function renderTagChips() {
+            const container = qs('#tag-chips')
+            container.innerHTML = M.tags.map(t => `
+        <span class="inline-flex items-center gap-1 bg-blue-50 text-g-blue text-xs font-medium px-2.5 py-1 rounded-full border border-blue-100">
+          #${escHtml(t)}
+          <button type="button" onclick="removeTag('${escAttr(t)}')" class="ml-0.5 hover:text-blue-700 leading-none">&times;</button>
+        </span>`).join('')
+        }
+
+        function populateTagDatalist() {
+            qs('#tag-datalist').innerHTML = S.tags.map(t => `<option value="${escAttr(t)}"></option>`).join('')
+        }
+
+        // ── Public toggle ─────────────────────────────────────────────────────────
+        function toggleModalPublic() {
+            M.isPublic = !M.isPublic
+            setModalPublicUI(M.isPublic)
+        }
+
+        function setModalPublicUI(isPublic) {
+            M.isPublic = isPublic
+            const icon = qs('#m-public-icon')
+            const label = qs('#m-public-label')
+            const btn = qs('#m-public-btn')
+            if (isPublic) {
+                icon.textContent = '🌐'
+                label.textContent = 'Public'
+                btn.className = 'flex items-center gap-2 border border-green-300 bg-green-50 text-green-700 rounded-full px-4 py-2 text-sm font-medium transition-colors'
+            } else {
+                icon.textContent = '🔒'
+                label.textContent = 'Private'
+                btn.className = 'flex items-center gap-2 border border-g-border text-g-gray rounded-full px-4 py-2 text-sm font-medium hover:border-g-blue transition-colors'
+            }
+        }
+
+        // ── Form submit ───────────────────────────────────────────────────────────
+        async function submitModal() {
+            const url = qs('#m-url').value.trim()
+            const slug = qs('#m-slug').value.trim().toLowerCase()
+            const title = qs('#m-title').value.trim()
+            const desc = qs('#m-desc').value.trim()
+            const expires = qs('#m-expires').value
+
+            // Client-side validation
+            qs('#m-url-error').classList.add('hidden')
+            qs('#m-slug-error').classList.add('hidden')
+            qs('#m-form-error').classList.add('hidden')
+
+            let valid = true
+            if (!url) {
+                showFieldError('m-url-error', 'URL is required.')
+                valid = false
+            } else {
+                try { new URL(url) } catch {
+                    showFieldError('m-url-error', 'Please enter a valid URL.')
+                    valid = false
+                }
+            }
+            if (!slug) {
+                showFieldError('m-slug-error', 'Short link slug is required.')
+                valid = false
+            } else if (!/^[a-z0-9_-]{1,64}$/.test(slug)) {
+                showFieldError('m-slug-error', 'Only lowercase letters, numbers, - and _ allowed.')
+                valid = false
+            }
+            if (!valid) return
+
+            // In add mode, check slug was verified
+            if (M.mode === 'add' && !M.slugOk) {
+                // Run check synchronously before submitting
+                const res = await api('GET', `/api/bookmarks/check-slug/availability?q=${encodeURIComponent(slug)}`)
+                const data = await res.json()
+                if (!data.available) {
+                    showFieldError('m-slug-error', 'That slug is already taken.')
+                    setSlugStatus('✗ taken', 'text-red-500')
+                    return
+                }
+                M.slugOk = true
+            }
+
+            setModalBusy(true)
+
+            const payload = {
+                url,
+                slug,
+                title: title || undefined,
+                short_description: desc || undefined,
+                is_public: M.isPublic,
+                tag_list: M.tags,
+                expires_at: expires || undefined,
+            }
+
+            try {
+                let res
+                if (M.mode === 'add') {
+                    res = await api('POST', '/api/bookmarks', payload)
+                } else {
+                    res = await api('PATCH', `/api/bookmarks/${M.editId}`, payload)
+                }
+
+                if (!res.ok) {
+                    const err = await res.json()
+                    showFieldError('m-form-error', err.error || 'Something went wrong.')
+                    setModalBusy(false)
+                    return
+                }
+
+                closeModal()
+                await Promise.all([loadBookmarks(M.mode === 'add' ? 1 : S.page), loadTags()])
+                toast(M.mode === 'add' ? 'Bookmark saved!' : 'Bookmark updated!')
+            } catch {
+                showFieldError('m-form-error', 'Network error. Please try again.')
+            }
+            setModalBusy(false)
+        }
+
+        function setModalBusy(busy) {
+            qs('#m-submit').disabled = busy
+            qs('#m-submit-text').classList.toggle('opacity-50', busy)
+            qs('#m-submit-spinner').classList.toggle('hidden', !busy)
+        }
+
+        function showFieldError(id, msg) {
+            const el = qs('#' + id)
+            if (!el) return
+            el.textContent = msg
+            el.classList.remove('hidden')
+        }
+
+        // Close modal on Escape key
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') closeModal()
+        })
+    </script>
+</body>
+
+</html>

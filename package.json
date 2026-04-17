@@ -1,0 +1,21 @@
+{
+  "name": "d11-shortener",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:create": "wrangler d1 create d11-db",
+    "db:migrate:local": "wrangler d1 execute d11-db --local --file=./schema.sql",
+    "db:migrate:remote": "wrangler d1 execute d11-db --file=./schema.sql",
+    "cf-typegen": "wrangler types"
+  },
+  "dependencies": {
+    "hono": "^4.6.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241218.0",
+    "typescript": "^5.7.2",
+    "wrangler": "^4.83.0"
+  }
+}

@@ -1,0 +1,34 @@
+name = "d11-shortener"
+main = "src/index.ts"
+compatibility_date = "2024-12-18"
+compatibility_flags = ["nodejs_compat"]
+
+# ─── D1 Database binding ────────────────────────────────────────────────────
+# After running `bun run db:create`, paste the returned database_id below.
+[[d1_databases]]
+binding = "DB"
+database_name = "d11-db"
+database_id = "394823da-d08b-496d-963d-298729aee84d"
+
+# ─── Environment variables ───────────────────────────────────────────────────
+# Set TOKEN_SECRET with: wrangler secret put TOKEN_SECRET
+# (used to sign/verify API tokens – keep it out of source control)
+[vars]
+ENVIRONMENT = "production"
+
+# ─── Custom domain routing ───────────────────────────────────────────────────
+# Uncomment and fill in after adding d11.me to your Cloudflare account.
+[[routes]]
+pattern = "d11.me/*"
+zone_name = "d11.me"
+
+# ─── Module rules: import HTML files as raw text strings ─────────────────────
+[[rules]]
+type = "Text"
+globs = ["**/*.html"]
+fallthrough = true
+
+# ─── Local dev overrides ─────────────────────────────────────────────────────
+[dev]
+port = 8787
+local_protocol = "http"
