@@ -223,6 +223,8 @@
                                 <p class="text-xs font-semibold text-g-black truncate" id="menu-name">—</p>
                                 <p class="text-xs text-g-gray truncate" id="menu-prefix">—</p>
                             </div>
+                            <button onclick="copyLoginLink()"
+                                class="w-full text-left px-4 py-2 text-sm text-g-gray hover:bg-[#F3F4F6] transition-colors">Copy Login Link</button>
                             <button onclick="doLogout()"
                                 class="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50 transition-colors">Sign
                                 Out</button>
@@ -504,6 +506,16 @@
 
         // ── Bootstrap ────────────────────────────────────────────────────────────────
         async function boot() {
+            // Auto-login from bookmarked login link (?token=…)
+            const params = new URLSearchParams(location.search)
+            const tokenParam = params.get('token')
+            if (tokenParam && !localStorage.getItem('d11_token')) {
+                localStorage.setItem('d11_token', tokenParam)
+                setAuthCookie(tokenParam)
+                // Clean the token out of the URL without a page reload
+                const clean = location.pathname + (params.toString().replace(/token=[^&]*&?/, '').replace(/^$/, '') ? '?' + params.toString().replace(/token=[^&]*&?/, '') : '')
+                history.replaceState(null, '', clean)
+            }
             S.token = localStorage.getItem('d11_token')
             // Keep auth cookie in sync so /l/ routes can verify ownership
             if (S.token) setAuthCookie(S.token)
@@ -557,6 +569,13 @@
         }
         function clearAuthCookie() {
             document.cookie = 'd11_auth=; path=/; SameSite=Lax; Secure; max-age=0'
+        }
+
+        function copyLoginLink() {
+            const url = `${location.origin}/?token=${encodeURIComponent(S.token)}`
+            navigator.clipboard.writeText(url)
+            toast('Login link copied — bookmark it in your browser!')
+            qs('#user-menu').classList.add('hidden')
         }
 
         function doLogout() {
