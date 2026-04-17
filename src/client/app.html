@@ -289,7 +289,8 @@
                                         viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                             d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                                    </svg></div>
+                                    </svg>
+                                </div>
                                 <div class="flex-1 min-w-0">
                                     <div class="flex items-center gap-2">
                                         <p class="text-sm font-semibold text-g-black">Dallas Cowboys — Official Site</p>
@@ -309,7 +310,8 @@
                                         viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                             d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                                    </svg></div>
+                                    </svg>
+                                </div>
                                 <div class="flex-1 min-w-0">
                                     <div class="flex items-center gap-2">
                                         <p class="text-sm font-semibold text-g-black">Cloudflare Workers Docs</p><span
@@ -328,7 +330,8 @@
                                         viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                             d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                                    </svg></div>
+                                    </svg>
+                                </div>
                                 <div class="flex-1 min-w-0">
                                     <div class="flex items-center gap-2">
                                         <p class="text-sm font-semibold text-g-black">Bun.js Documentation</p><span
@@ -347,7 +350,8 @@
                                         viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                             d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                                    </svg></div>
+                                    </svg>
+                                </div>
                                 <div class="flex-1 min-w-0">
                                     <div class="flex items-center gap-2">
                                         <p class="text-sm font-semibold text-g-black">Tailwind CSS — Utility Classes</p>
@@ -426,24 +430,26 @@
                     <p class="text-g-gray text-sm mb-6 leading-relaxed">
                         Paste your API token below to sign in. Your token was shown when you registered.
                     </p>
-                    <div class="space-y-4">
+                    <form class="space-y-4" onsubmit="event.preventDefault(); doLogin()" action="javascript:void(0)">
+                        <input type="text" name="username" autocomplete="username" aria-hidden="true" class="hidden"
+                            value="d11.me" tabindex="-1">
                         <div>
                             <label class="block text-xs font-semibold text-g-gray mb-1.5 uppercase tracking-wide">API
                                 Token</label>
-                            <input id="login-token" type="password" placeholder="Paste your token here…"
-                                class="w-full border border-g-border rounded-[12px] px-4 py-3 text-sm focus:outline-none focus:border-g-blue transition-colors"
-                                onkeydown="if(event.key==='Enter') doLogin()">
+                            <input id="login-token" type="password" name="password" autocomplete="current-password"
+                                placeholder="Paste your token here…"
+                                class="w-full border border-g-border rounded-[12px] px-4 py-3 text-sm focus:outline-none focus:border-g-blue transition-colors">
                         </div>
                         <div id="login-error"
                             class="hidden text-red-500 text-xs bg-red-50 border border-red-100 rounded-[8px] px-3 py-2">
                         </div>
-                        <button onclick="doLogin()"
+                        <button type="submit"
                             class="w-full bg-g-blue text-white font-semibold py-3 rounded-full hover:bg-blue-600 transition-all flex items-center justify-center gap-2">
                             <span id="login-btn-text">Sign In</span>
                             <span id="login-spinner"
                                 class="hidden spinner !border-2 !border-white/40 !border-t-white"></span>
                         </button>
-                    </div>
+                    </form>
                 </div>
 
                 <!-- ── Register panel ── -->
