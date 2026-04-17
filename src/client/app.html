@@ -507,14 +507,17 @@
 
         // ── Bootstrap ────────────────────────────────────────────────────────────────
         async function boot() {
-            // Auto-login from bookmarked login link (?token=…)
+            // Parse URL params once — used for both auto-login and bookmarklet pre-fill
             const params = new URLSearchParams(location.search)
+
+            // Auto-login from bookmarked login link (?token=…)
             const tokenParam = params.get('token')
             if (tokenParam && !localStorage.getItem('d11_token')) {
                 localStorage.setItem('d11_token', tokenParam)
                 setAuthCookie(tokenParam)
                 // Clean the token out of the URL without a page reload
-                const clean = location.pathname + (params.toString().replace(/token=[^&]*&?/, '').replace(/^$/, '') ? '?' + params.toString().replace(/token=[^&]*&?/, '') : '')
+                params.delete('token')
+                const clean = location.pathname + (params.toString() ? '?' + params.toString() : '')
                 history.replaceState(null, '', clean)
             }
             S.token = localStorage.getItem('d11_token')
@@ -522,7 +525,6 @@
             if (S.token) setAuthCookie(S.token)
 
             // Pre-fill from ?url= query param (bookmarklet)
-            const params = new URLSearchParams(location.search)
             const preUrl = params.get('url')
             const preTitle = params.get('title')
             const preDesc = params.get('desc')
