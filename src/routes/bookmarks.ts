@@ -81,7 +81,7 @@ bookmarks.post('/', async (c) => {
         title: body.title,
         short_description: body.short_description,
         favicon_url: body.favicon_url,
-        is_public: body.is_public ?? false,
+        is_public: body.is_public ?? true,
         tag_list: body.tag_list ?? [],
         expires_at: body.expires_at,
     })

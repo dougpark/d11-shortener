@@ -53,18 +53,24 @@ app.get('/l/:prefix/:slug', async (c) => {
   const user = await getUserBySlugPrefix(c.env.DB, prefix)
   if (!user) return c.notFound()
 
-  const bookmark = await getBookmarkBySlug(c.env.DB, slug)
+  // Resolve the requesting user from the auth cookie (if present) so we can
+  // pass their id to getBookmarkBySlug — which filters private bookmarks at
+  // the SQL level using (is_public = 1 OR user_id = ?).
+  let requestingUserId: number | undefined
+  const rawToken = getCookie(c, 'd11_auth')
+  if (rawToken) {
+    const tokenHash = await hashToken(decodeURIComponent(rawToken))
+    const requestingUser = await getUserByTokenHash(c.env.DB, tokenHash)
+    requestingUserId = requestingUser?.id
+  }
+
+  const bookmark = await getBookmarkBySlug(c.env.DB, slug, requestingUserId)
   if (!bookmark) return c.notFound()
   if (bookmark.user_id !== user.id) return c.notFound()
 
-  if (!bookmark.is_public) {
-    // Allow the owner through via their auth cookie
-    const rawToken = getCookie(c, 'd11_auth')
-    if (!rawToken) return c.notFound()
-    const tokenHash = await hashToken(decodeURIComponent(rawToken))
-    const requestingUser = await getUserByTokenHash(c.env.DB, tokenHash)
-    if (requestingUser?.id !== bookmark.user_id) return c.notFound()
-  }
+  // Private bookmarks are only accessible to the owner (enforced above via
+  // getBookmarkBySlug — bots should not get an OG preview for private links)
+  if (!bookmark.is_public && requestingUserId !== bookmark.user_id) return c.notFound()
 
   // Fire-and-forget analytics
   c.executionCtx.waitUntil(

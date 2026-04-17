@@ -867,7 +867,7 @@
         }
         function openAddModal(preUrl, preTitle, preDesc) {
             M.mode = 'add'
-            M.isPublic = false
+            M.isPublic = true
             M.tags = []
             M.slugOk = false
             M.editId = null
@@ -884,7 +884,7 @@
             qs('#slug-prefix-hint').textContent = S.user?.slug_prefix || ''
             qs('#slug-live').textContent = '…'
             qs('#slug-status').textContent = ''
-            setModalPublicUI(false)
+            setModalPublicUI(true)
             renderTagChips()
             populateTagDatalist()
             showEl('bookmark-modal')
