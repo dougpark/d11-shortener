@@ -114,8 +114,12 @@ bookmarks.patch('/:id', async (c) => {
         if (!/^[a-z0-9_-]{1,64}$/.test(body.slug)) {
             return c.json({ error: 'invalid slug format' }, 400)
         }
-        const available = await isSlugAvailable(c.env.DB, user.id, body.slug)
-        if (!available) return c.json({ error: 'slug already taken' }, 409)
+        const existing = await getBookmark(c.env.DB, id, user.id)
+        if (!existing) return c.json({ error: 'Not Found' }, 404)
+        if (body.slug !== existing.slug) {
+            const available = await isSlugAvailable(c.env.DB, user.id, body.slug)
+            if (!available) return c.json({ error: 'slug already taken' }, 409)
+        }
     }
 
     if (body.url !== undefined) {
