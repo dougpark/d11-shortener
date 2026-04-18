@@ -1124,7 +1124,11 @@
         <span class="text-g-gray text-xs truncate max-w-xs">${escHtml(shortDomain(b.url))}</span>
         ${b.hit_count ? `<span class="text-g-gray text-xs">· ${b.hit_count} click${b.hit_count !== 1 ? 's' : ''}</span>` : ''}
       </div>
-      ${b.short_description ? `<p class="text-xs text-g-gray leading-relaxed mb-1.5 line-clamp-2">${escHtml(b.short_description)}</p>` : ''}
+      ${b.short_description ? `
+      <div class="mb-1.5">
+        <p id="desc-${b.id}" class="text-xs text-g-gray leading-relaxed line-clamp-2">${escHtml(b.short_description)}</p>
+        <button onclick="toggleDesc(${b.id}, this)" class="text-xs text-g-blue hover:underline mt-0.5" data-expanded="false">show more</button>
+      </div>` : ''}
       ${tags ? `<div class="flex flex-wrap gap-1">${tags}</div>` : ''}
     </div>
 
@@ -1217,6 +1221,15 @@
         function copyLink(url) {
             navigator.clipboard.writeText(url)
             toast('Short link copied!')
+        }
+
+        function toggleDesc(id, btn) {
+            const p = qs(`#desc-${id}`)
+            if (!p) return
+            const expanded = btn.dataset.expanded === 'true'
+            p.classList.toggle('line-clamp-2', expanded)
+            btn.dataset.expanded = expanded ? 'false' : 'true'
+            btn.textContent = expanded ? 'show more' : 'show less'
         }
 
         // ── Bookmarklet ───────────────────────────────────────────────────────────────
