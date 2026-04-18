@@ -1456,7 +1456,11 @@
         <span class="text-g-gray text-xs">${escHtml(shortDomain(b.url))}</span>
         ${b.hit_count ? `<span class="text-g-gray text-xs">· ${b.hit_count}</span>` : ''}
       </div>
-      ${b.short_description ? `<p class="text-xs text-g-gray leading-relaxed mt-1 line-clamp-2">${escHtml(b.short_description)}</p>` : ''}
+      ${b.short_description ? `
+      <div class="relative mt-1 cursor-pointer" onclick="toggleMobileDesc(this)">
+        <p class="text-xs text-g-gray leading-relaxed line-clamp-2 transition-all">${escHtml(b.short_description)}</p>
+        <div class="absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-white to-transparent pointer-events-none desc-fade"></div>
+      </div>` : ''}
       ${tags ? `<div class="flex flex-wrap gap-1 mt-1.5">${tags}</div>` : ''}
     </div>
   </div>`
@@ -1493,6 +1497,15 @@
         }
 
         function closeMobileActions() { hideEl('mobile-action-sheet') }
+
+        function toggleMobileDesc(wrapper) {
+            const p = wrapper.querySelector('p')
+            const fade = wrapper.querySelector('.desc-fade')
+            const expanded = wrapper.dataset.expanded === 'true'
+            p.classList.toggle('line-clamp-2', expanded)
+            if (fade) fade.classList.toggle('hidden', !expanded)
+            wrapper.dataset.expanded = expanded ? 'false' : 'true'
+        }
 
         // ── Mobile: nav + search toggle ───────────────────────────────────────────────
         function switchMobileTab(tab) {
