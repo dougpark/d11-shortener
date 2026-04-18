@@ -1193,11 +1193,11 @@
             hideEl('token-modal')
             if (!S.isMobile) switchTab('login')
             goTo('login')
-            qs('#login-token').value = token
+            //qs('#login-token').value = token - does not work on Safari
             const loginForm = qs('#login-token').closest('form')
             const unField = loginForm.querySelector('[name="username"]')
             if (unField && S.newPrefix) unField.value = S.newPrefix
-            loginForm.requestSubmit()
+            //loginForm.requestSubmit() - does not work on Safari
         }
 
         // ── Bookmarks ─────────────────────────────────────────────────────────────────
