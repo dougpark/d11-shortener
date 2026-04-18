@@ -1084,7 +1084,7 @@
 
         function renderBookmarkRow(b) {
             const tags = (Array.isArray(b.tag_list) ? b.tag_list : []).map(t =>
-                `<span class="bg-[#F3F4F6] text-g-gray text-xs px-2 py-0.5 rounded-full">#${escHtml(t)}</span>`
+                `<button onclick="filterByTag('${escAttr(t)}')" class="bg-[#F3F4F6] text-g-gray text-xs px-2 py-0.5 rounded-full hover:bg-g-blue hover:text-white transition-colors">#${escHtml(t)}</button>`
             ).join('')
 
             const pubBadge = b.is_public
@@ -1105,66 +1105,69 @@
             const fullShortLink = `${location.origin}/l/${S.user?.slug_prefix}/${b.slug}`
 
             return `
-  <div class="group flex items-start gap-3 p-4 bg-white border border-g-border rounded-[12px] hover:border-g-blue hover:shadow-soft transition-all fade-in" data-id="${b.id}">
-    <div class="mt-0.5">${favicon}</div>
-    <div class="flex-1 min-w-0">
-      <div class="flex flex-wrap items-center gap-1.5 mb-0.5">
-        <a href="${escAttr(b.url)}" target="_blank" rel="noopener noreferrer"
-          class="text-sm font-semibold text-g-black hover:text-g-blue transition-colors truncate max-w-sm">
-          ${escHtml(b.title || b.url)}
-        </a>
-        ${pubBadge}${archBadge}
+  <div class="group flex flex-col p-4 bg-white border border-g-border rounded-[12px] hover:border-g-blue hover:shadow-soft transition-all fade-in" data-id="${b.id}">
+    <!-- Top row: favicon · title/link · action buttons -->
+    <div class="flex items-start gap-3">
+      <div class="mt-0.5 flex-shrink-0">${favicon}</div>
+      <div class="flex-1 min-w-0">
+        <div class="flex flex-wrap items-center gap-1.5 mb-0.5">
+          <a href="${escAttr(b.url)}" target="_blank" rel="noopener noreferrer"
+            class="text-sm font-semibold text-g-black hover:text-g-blue transition-colors truncate max-w-sm">
+            ${escHtml(b.title || b.url)}
+          </a>
+          ${pubBadge}${archBadge}
+        </div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <button onclick="copyLink('${escAttr(fullShortLink)}')"
+            class="text-g-blue text-xs font-mono hover:underline flex items-center gap-1">
+            ${escHtml(shortLink)}
+          </button>
+          <span class="text-g-border text-xs">·</span>
+          <span class="text-g-gray text-xs truncate max-w-xs">${escHtml(shortDomain(b.url))}</span>
+          ${b.hit_count ? `<span class="text-g-gray text-xs">· ${b.hit_count} click${b.hit_count !== 1 ? 's' : ''}</span>` : ''}
+        </div>
       </div>
-      <div class="flex items-center gap-2 flex-wrap mb-1.5">
-        <button onclick="copyLink('${escAttr(fullShortLink)}')"
-          class="text-g-blue text-xs font-mono hover:underline flex items-center gap-1">
-          ${escHtml(shortLink)}
+      <!-- Action buttons (visible on hover) -->
+      <div class="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+        <button title="Copy short link" onclick="copyLink('${escAttr(fullShortLink)}')"
+          class="p-1.5 text-g-gray border border-g-border rounded-[8px] hover:border-g-blue hover:text-g-blue transition-colors">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+          </svg>
         </button>
-        <span class="text-g-border text-xs">·</span>
-        <span class="text-g-gray text-xs truncate max-w-xs">${escHtml(shortDomain(b.url))}</span>
-        ${b.hit_count ? `<span class="text-g-gray text-xs">· ${b.hit_count} click${b.hit_count !== 1 ? 's' : ''}</span>` : ''}
-      </div>
-      ${b.short_description ? `
-      <div class="mb-1.5">
-        <p id="desc-${b.id}" class="text-xs text-g-gray leading-relaxed line-clamp-2">${escHtml(b.short_description)}</p>
-        <button onclick="toggleDesc(${b.id}, this)" class="text-xs text-g-blue hover:underline mt-0.5" data-expanded="false">show more</button>
-      </div>` : ''}
-      ${tags ? `<div class="flex flex-wrap gap-1">${tags}</div>` : ''}
-    </div>
-
-    <!-- Action buttons (visible on hover) -->
-    <div class="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-0.5">
-      <button title="Copy short link" onclick="copyLink('${escAttr(fullShortLink)}')"
-        class="p-1.5 text-g-gray border border-g-border rounded-[8px] hover:border-g-blue hover:text-g-blue transition-colors">
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-        </svg>
-      </button>
-      <button title="Edit" onclick="openEditModal(${b.id})"
-        class="p-1.5 text-g-gray border border-g-border rounded-[8px] hover:border-g-blue hover:text-g-blue transition-colors">
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-        </svg>
-      </button>
-      <button title="${b.is_public ? 'Make Private' : 'Make Public'}" onclick="togglePublic(${b.id}, ${b.is_public})"
-        class="p-1.5 text-g-gray border border-g-border rounded-[8px] hover:border-g-blue hover:text-g-blue transition-colors">
-        ${b.is_public
+        <button title="Edit" onclick="openEditModal(${b.id})"
+          class="p-1.5 text-g-gray border border-g-border rounded-[8px] hover:border-g-blue hover:text-g-blue transition-colors">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+          </svg>
+        </button>
+        <button title="${b.is_public ? 'Make Private' : 'Make Public'}" onclick="togglePublic(${b.id}, ${b.is_public})"
+          class="p-1.5 text-g-gray border border-g-border rounded-[8px] hover:border-g-blue hover:text-g-blue transition-colors">
+          ${b.is_public
                     ? `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>`
                     : `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>`}
-      </button>
-      <button title="Archive" onclick="toggleArchive(${b.id}, ${b.is_archived})"
-        class="p-1.5 text-g-gray border border-g-border rounded-[8px] hover:border-yellow-400 hover:text-yellow-600 transition-colors">
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
-        </svg>
-      </button>
-      <button title="Delete" onclick="deleteBookmark(${b.id})"
-        class="p-1.5 text-red-400 border border-red-100 rounded-[8px] hover:bg-red-50 transition-colors">
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-        </svg>
-      </button>
+        </button>
+        <button title="Archive" onclick="toggleArchive(${b.id}, ${b.is_archived})"
+          class="p-1.5 text-g-gray border border-g-border rounded-[8px] hover:border-yellow-400 hover:text-yellow-600 transition-colors">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
+          </svg>
+        </button>
+        <button title="Delete" onclick="deleteBookmark(${b.id})"
+          class="p-1.5 text-red-400 border border-red-100 rounded-[8px] hover:bg-red-50 transition-colors">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+          </svg>
+        </button>
+      </div>
     </div>
+    <!-- Full-width description + tags below the top row -->
+    ${b.short_description ? `
+    <div class="mt-2 pl-8">
+      <p id="desc-${b.id}" class="text-xs text-g-gray leading-relaxed line-clamp-2">${escHtml(b.short_description)}</p>
+      <button onclick="toggleDesc(${b.id}, this)" class="text-xs text-g-blue hover:underline mt-0.5" data-expanded="false">show more</button>
+    </div>` : ''}
+    ${tags ? `<div class="flex flex-wrap gap-1 mt-2 pl-8">${tags}</div>` : ''}
   </div>`
         }
 
