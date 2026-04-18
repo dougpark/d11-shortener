@@ -663,6 +663,15 @@
                                     d="M4 6h16M4 10h10M4 14h16M4 18h10" />
                             </svg>
                         </button>
+                        <button id="unread-filter-btn" onclick="toggleUnreadFilter()" title="Show unread only"
+                            class="p-1.5 rounded-full text-g-gray hover:text-g-blue hover:bg-blue-50 transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                        </button>
                     </div>
                 </div>
 
@@ -782,6 +791,15 @@
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M4 6h16M4 10h10M4 14h16M4 18h10" />
+                            </svg>
+                        </button>
+                        <button id="mobile-unread-filter-btn" onclick="toggleUnreadFilter()" title="Show unread only"
+                            class="p-1.5 rounded-full text-g-gray hover:text-g-blue hover:bg-blue-50 transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                             </svg>
                         </button>
                     </div>
@@ -1053,6 +1071,7 @@
             newToken: null,      // stored temporarily after register
             isMobile: false,     // set in boot() — true when viewport < 768px
             expandDescs: false,  // global expand-all descriptions toggle
+            unreadOnly: false,   // filter to bookmarks never clicked (hit_count=0)
         }
 
         // ── Bootstrap ────────────────────────────────────────────────────────────────
@@ -1236,6 +1255,7 @@
             })
             if (S.activeTag) params.set('tag', S.activeTag)
             if (S.searchQuery) params.set('search', S.searchQuery)
+            if (S.unreadOnly) params.set('unread', '1')
 
             const res = await api('GET', `/api/bookmarks?${params}`)
             hideEl(p + 'list-loading')
@@ -1545,6 +1565,18 @@
                 if (fade) fade.classList.toggle('hidden', S.expandDescs)
                 wrapper.dataset.expanded = S.expandDescs ? 'true' : 'false'
             })
+        }
+
+        function toggleUnreadFilter() {
+            S.unreadOnly = !S.unreadOnly
+            const activeClass = ['text-g-blue', 'bg-blue-50']
+                ;['#unread-filter-btn', '#mobile-unread-filter-btn'].forEach(sel => {
+                    const el = qs(sel)
+                    if (!el) return
+                    el.title = S.unreadOnly ? 'Show all bookmarks' : 'Show unread only'
+                    activeClass.forEach(c => el.classList.toggle(c, S.unreadOnly))
+                })
+            loadBookmarks(1)
         }
 
         // ── Mobile: dense card renderer ───────────────────────────────────────────────

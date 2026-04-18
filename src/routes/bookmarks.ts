@@ -29,6 +29,7 @@ bookmarks.get('/', async (c) => {
         tag: q.tag,
         search: q.search,
         include_archived: q.archived === '1',
+        unread: q.unread === '1',
         page: q.page ? parseInt(q.page, 10) : 1,
         per_page: q.per_page ? Math.min(parseInt(q.per_page, 10), 100) : 25,
     })

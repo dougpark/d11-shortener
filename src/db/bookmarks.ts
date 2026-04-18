@@ -16,6 +16,7 @@ export async function listBookmarks(
         tag,
         search,
         include_archived = false,
+        unread = false,
         page = 1,
         per_page = 25,
     } = opts
@@ -43,6 +44,10 @@ export async function listBookmarks(
         conditions.push(`(title LIKE ? OR url LIKE ? OR short_description LIKE ?)`)
         const like = `%${search}%`
         bindings.push(like, like, like)
+    }
+
+    if (unread) {
+        conditions.push('hit_count = 0')
     }
 
     const where = conditions.join(' AND ')

@@ -71,6 +71,7 @@ export type ListBookmarksOptions = {
     tag?: string          // filter by a single tag (LIKE search inside JSON)
     search?: string       // full-text LIKE search across title, url, description
     include_archived?: boolean
+    unread?: boolean      // only bookmarks never clicked (hit_count = 0)
     page?: number         // 1-based
     per_page?: number     // default 25
 }
