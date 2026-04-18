@@ -655,6 +655,14 @@
                             <option value="hit_count">Most visited</option>
                             <option value="last_accessed">Last accessed</option>
                         </select>
+                        <button id="expand-descs-btn" onclick="toggleAllDescs()" title="Expand all descriptions"
+                            class="p-1.5 rounded-full text-g-gray hover:text-g-blue hover:bg-blue-50 transition-colors">
+                            <svg id="expand-descs-icon" class="w-4 h-4" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 6h16M4 10h10M4 14h16M4 18h10" />
+                            </svg>
+                        </button>
                     </div>
                 </div>
 
@@ -1035,6 +1043,7 @@
             confirmCb: null,
             newToken: null,      // stored temporarily after register
             isMobile: false,     // set in boot() — true when viewport < 768px
+            expandDescs: false,  // global expand-all descriptions toggle
         }
 
         // ── Bootstrap ────────────────────────────────────────────────────────────────
@@ -1430,8 +1439,8 @@
     <!-- Full-width description + tags below the top row -->
     ${b.short_description ? `
     <div class="mt-2 pl-8">
-      <p id="desc-${b.id}" class="text-xs text-g-gray leading-relaxed line-clamp-2">${escHtml(b.short_description)}</p>
-      <button onclick="toggleDesc(${b.id}, this)" class="text-xs text-g-blue hover:underline mt-0.5" data-expanded="false">show more</button>
+      <p id="desc-${b.id}" class="text-xs text-g-gray leading-relaxed ${S.expandDescs ? '' : 'line-clamp-2'}">${escHtml(b.short_description)}</p>
+      <button onclick="toggleDesc(${b.id}, this)" class="text-xs text-g-blue hover:underline mt-0.5" data-expanded="${S.expandDescs}">${S.expandDescs ? 'show less' : 'show more'}</button>
     </div>` : ''}
     ${tags ? `<div class="flex flex-wrap gap-1 mt-2 pl-8">${tags}</div>` : ''}
   </div>`
@@ -1500,6 +1509,20 @@
             p.classList.toggle('line-clamp-2', expanded)
             btn.dataset.expanded = expanded ? 'false' : 'true'
             btn.textContent = expanded ? 'show more' : 'show less'
+        }
+
+        function toggleAllDescs() {
+            S.expandDescs = !S.expandDescs
+            const btn = qs('#expand-descs-btn')
+            if (btn) btn.title = S.expandDescs ? 'Collapse all descriptions' : 'Expand all descriptions'
+            document.querySelectorAll('[id^="desc-"]').forEach(p => {
+                p.classList.toggle('line-clamp-2', !S.expandDescs)
+                const toggleBtn = p.nextElementSibling
+                if (toggleBtn && toggleBtn.dataset.expanded !== undefined) {
+                    toggleBtn.dataset.expanded = S.expandDescs ? 'true' : 'false'
+                    toggleBtn.textContent = S.expandDescs ? 'show less' : 'show more'
+                }
+            })
         }
 
         // ── Mobile: dense card renderer ───────────────────────────────────────────────
