@@ -12,6 +12,8 @@ import { hashToken } from './utils/auth.ts'
 import { getCookie } from 'hono/cookie'
 // @ts-expect-error — text module loaded by Wrangler rule
 import appHtml from './client/app.html'
+// @ts-expect-error — text module loaded by Wrangler rule
+import stationHtml from './client/station.html'
 
 // ─── Environment bindings (declared in wrangler.toml) ─────────────────────────
 export type Env = {
@@ -146,9 +148,83 @@ app.get('/api/preview', authMiddleware, async (c) => {
   return c.redirect(`/api/bookmarks/preview/fetch${url ? `?url=${encodeURIComponent(url)}` : ''}`)
 })
 
+// ─── Station API: GET /api/v/:dashboardTag ──────────────────────────────────
+// Optional auth. Authenticated → owner's own bookmarks. Unauthenticated → public only.
+// Bookmarks are grouped by their secondary tags (tags other than dashboardTag).
+// Secondary tags may carry a sort order via colon suffix: "AiStation:01".
+app.get('/api/v/:dashboardTag', async (c) => {
+  const rawTag = c.req.param('dashboardTag').toLowerCase()
+
+  // Only allow safe tag characters
+  if (!/^[a-z0-9_-]{1,64}$/.test(rawTag)) {
+    return c.json({ error: 'Invalid tag name' }, 400)
+  }
+
+  // Optional auth via cookie
+  let userId: number | undefined
+  const rawToken = getCookie(c, 'd11_auth')
+  if (rawToken) {
+    const tokenHash = await hashToken(decodeURIComponent(rawToken))
+    const user = await getUserByTokenHash(c.env.DB, tokenHash)
+    userId = user?.id
+  }
+
+  // The LIKE pattern safely bound as a parameter — not interpolated into SQL
+  const likePattern = `%"${rawTag}"%`
+
+  const result = userId
+    ? await c.env.DB.prepare(
+      `SELECT id, url, title, favicon_url, hit_count, tag_list
+         FROM bookmarks
+         WHERE user_id = ? AND is_archived = 0 AND tag_list LIKE ?
+         ORDER BY created_at ASC`
+    ).bind(userId, likePattern).all()
+    : await c.env.DB.prepare(
+      `SELECT id, url, title, favicon_url, hit_count, tag_list
+         FROM bookmarks
+         WHERE is_public = 1 AND is_archived = 0 AND tag_list LIKE ?
+         ORDER BY created_at ASC`
+    ).bind(likePattern).all()
+
+  // Group bookmarks by secondary tags
+  // Each secondary tag can carry a numeric sort order via colon suffix: "AiStation:01"
+  type Group = { name: string; order: number; bookmarks: unknown[] }
+  const groupMap = new Map<string, Group>()
+
+  for (const row of (result.results as Record<string, unknown>[])) {
+    let tags: string[] = []
+    try { tags = JSON.parse((row.tag_list as string) || '[]') } catch { /* skip */ }
+
+    // Tags other than the dashboard tag are used as group names
+    const secondaryTags = tags.filter(t => t.toLowerCase() !== rawTag)
+    const groupTags = secondaryTags.length > 0 ? secondaryTags : ['Misc']
+
+    for (const gTag of groupTags) {
+      const colonIdx = gTag.indexOf(':')
+      const name = colonIdx >= 0 ? gTag.slice(0, colonIdx) : gTag
+      const order = colonIdx >= 0 ? (parseInt(gTag.slice(colonIdx + 1), 10) || 500) : 500
+
+      if (!groupMap.has(name)) groupMap.set(name, { name, order, bookmarks: [] })
+      groupMap.get(name)!.bookmarks.push({
+        id: row.id,
+        url: row.url,
+        title: row.title,
+        favicon_url: row.favicon_url,
+        hit_count: row.hit_count,
+      })
+    }
+  }
+
+  const groups = [...groupMap.values()]
+    .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name))
+
+  return c.json({ dashboardTag: rawTag, groups, authenticated: !!userId })
+})
+
 // ─── Front-end HTML (single SPA served for all UI routes) ────────────────────
 app.get('/', (c) => c.html(appHtml as string))
 app.get('/add', (c) => c.html(appHtml as string))
+app.get('/v/:dashboardTag', (c) => c.html(stationHtml as string))
 
 // ─── 404 catch-all ────────────────────────────────────────────────────────────
 app.notFound((c) => c.json({ error: 'Not Found' }, 404))

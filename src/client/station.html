@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Station — Lumin</title>
+    <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="shortcut icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        g: { blue: '#4285F4', black: '#1F1F1F', gray: '#474747', border: '#E3E3E3', surface: '#FFFFFF' }
+                    },
+                    fontFamily: { sans: ['Inter', 'Roboto', 'sans-serif'] },
+                }
+            }
+        }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .card-glow {
+            transition: box-shadow 0.18s ease, border-color 0.18s ease;
+        }
+
+        .card-glow:hover {
+            box-shadow: 0 0 0 2px #4285F4, 0 8px 28px rgba(66, 133, 244, 0.12);
+            border-color: #4285F4 !important;
+        }
+
+        .spinner {
+            border: 2px solid #E3E3E3;
+            border-top-color: #4285F4;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            animation: spin .7s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-[#F0F2F5] font-sans text-g-black antialiased min-h-screen">
+
+    <!-- ── Nav ── -->
+    <header class="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-g-border">
+        <div class="max-w-7xl mx-auto px-6 h-14 flex items-center gap-3">
+            <a href="/" class="flex-shrink-0">
+                <img src="/lumin_logo.png" alt="Lumin" class="h-8 w-auto">
+            </a>
+            <span class="text-g-border select-none">|</span>
+            <h1 id="page-title" class="text-sm font-semibold text-g-black flex-1 capitalize">Station</h1>
+            <a href="/" title="Back to dashboard"
+                class="flex items-center gap-1.5 text-xs text-g-gray hover:text-g-blue transition-colors">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+                Dashboard
+            </a>
+        </div>
+    </header>
+
+    <!-- ── Loading ── -->
+    <div id="loading" class="flex items-center justify-center py-40">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- ── Empty state ── -->
+    <div id="empty" class="hidden text-center py-40 px-6">
+        <div class="w-16 h-16 bg-blue-50 rounded-[16px] flex items-center justify-center mx-auto mb-4">
+            <svg class="w-8 h-8 text-g-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                    d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+            </svg>
+        </div>
+        <p class="font-semibold text-g-black mb-1">No bookmarks found</p>
+        <p class="text-sm text-g-gray">No bookmarks tagged <span id="empty-tag"
+                class="font-mono text-g-blue">#station</span> found.</p>
+        <a href="/" class="mt-6 inline-block text-sm text-g-blue hover:underline">← Back to Dashboard</a>
+    </div>
+
+    <!-- ── Card grid ── -->
+    <main id="grid" class="hidden max-w-7xl mx-auto px-6 py-8">
+        <div id="card-grid" class="grid gap-4" style="grid-template-columns: repeat(auto-fill, minmax(260px, 1fr))">
+        </div>
+    </main>
+
+    <script>
+        function qs(sel) { return document.querySelector(sel) }
+        function showEl(id) { qs('#' + id)?.classList.remove('hidden') }
+        function hideEl(id) { qs('#' + id)?.classList.add('hidden') }
+        function escHtml(s) {
+            return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+        }
+
+        // Extract tag from path: /v/station → "station"
+        const pathParts = location.pathname.replace(/\/+$/, '').split('/')
+        const dashboardTag = pathParts[pathParts.length - 1] || 'station'
+
+        // Update nav title and empty-state hint tag
+        const displayName = dashboardTag.charAt(0).toUpperCase() + dashboardTag.slice(1)
+        document.title = displayName + ' Station — Lumin'
+        qs('#page-title').textContent = displayName + ' Station'
+        qs('#empty-tag').textContent = '#' + dashboardTag
+
+        // ── Favicon renderer ──────────────────────────────────────────────────
+        function makeFallbackIcon(letter) {
+            const span = document.createElement('span')
+            span.className = 'w-4 h-4 bg-blue-100 text-g-blue rounded text-[9px] font-bold flex items-center justify-center flex-shrink-0'
+            span.textContent = (letter || '?').toUpperCase()
+            return span
+        }
+
+        function faviconHtml(b) {
+            const letter = ((b.title || b.url) + '?')[0]
+            if (b.favicon_url) {
+                return `<img src="${escHtml(b.favicon_url)}" alt="" loading="lazy"
+                    class="w-4 h-4 rounded object-contain flex-shrink-0"
+                    onerror="this.replaceWith(makeFallbackIcon('${escHtml(letter)}'))">`
+            }
+            return `<span class="w-4 h-4 bg-blue-100 text-g-blue rounded text-[9px] font-bold flex items-center justify-center flex-shrink-0">${escHtml(letter.toUpperCase())}</span>`
+        }
+
+        // ── Card renderer ─────────────────────────────────────────────────────
+        function renderCard(group) {
+            const links = group.bookmarks.map(b => `
+                <a href="${escHtml(b.url)}" target="_blank" rel="noopener noreferrer"
+                   class="flex items-center gap-2.5 px-2 py-1.5 -mx-2 rounded-[8px] hover:bg-blue-50 group transition-colors">
+                    ${faviconHtml(b)}
+                    <span class="flex-1 text-sm text-g-black group-hover:text-g-blue transition-colors leading-snug truncate min-w-0">${escHtml(b.title || b.url)}</span>
+                    ${b.hit_count > 0 ? `<span class="text-[11px] text-g-gray flex-shrink-0 tabular-nums ml-1">${b.hit_count}</span>` : ''}
+                </a>`).join('')
+
+            return `
+                <div class="bg-white border border-g-border rounded-[20px] p-5 card-glow">
+                    <p class="text-[11px] font-semibold text-g-gray uppercase tracking-widest mb-3 leading-none">${escHtml(group.name)}</p>
+                    <div class="space-y-0.5">${links}</div>
+                </div>`
+        }
+
+        // ── Init ──────────────────────────────────────────────────────────────
+        async function init() {
+            try {
+                const res = await fetch('/api/v/' + encodeURIComponent(dashboardTag))
+                hideEl('loading')
+                if (!res.ok) { showEl('empty'); return }
+                const { groups } = await res.json()
+                if (!groups || groups.length === 0) { showEl('empty'); return }
+                qs('#card-grid').innerHTML = groups.map(renderCard).join('')
+                showEl('grid')
+            } catch {
+                hideEl('loading')
+                showEl('empty')
+            }
+        }
+
+        init()
+    </script>
+
+</body>
+
+</html>
