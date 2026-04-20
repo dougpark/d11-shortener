@@ -12,7 +12,7 @@ import {
     listTags,
 } from '../db/bookmarks.ts'
 import { fetchUrlPreview } from '../utils/preview.ts'
-import type { UpdateBookmarkInput } from '../db/types.ts'
+import type { Bookmark, UpdateBookmarkInput } from '../db/types.ts'
 
 const bookmarks = new Hono<{ Bindings: Env; Variables: Variables }>()
 
@@ -105,6 +105,98 @@ bookmarks.get('/check-url', async (c) => {
 
     if (!row) return c.json({ exists: false })
     return c.json({ exists: true, bookmark: parseBookmark(row as Parameters<typeof parseBookmark>[0]) })
+})
+
+// ─── GET /api/bookmarks/export ────────────────────────────────────────────────
+bookmarks.get('/export', async (c) => {
+    const user = c.get('user')
+    const { results } = await c.env.DB
+        .prepare('SELECT * FROM bookmarks WHERE user_id = ? ORDER BY created_at ASC')
+        .bind(user.id)
+        .all<Bookmark>()
+
+    const out = results.map(b => ({
+        url: b.url,
+        slug: b.slug,
+        title: b.title ?? null,
+        short_description: b.short_description ?? null,
+        favicon_url: b.favicon_url ?? null,
+        is_public: b.is_public === 1,
+        is_archived: b.is_archived === 1,
+        tag_list: (() => { try { return JSON.parse(b.tag_list) } catch { return [] } })(),
+        expires_at: b.expires_at ?? null,
+        created_at: b.created_at,
+    }))
+
+    const date = new Date().toISOString().split('T')[0]
+    const payload = JSON.stringify({ version: 1, exported_at: new Date().toISOString(), count: out.length, bookmarks: out }, null, 2)
+    return new Response(payload, {
+        status: 200,
+        headers: {
+            'Content-Type': 'application/json',
+            'Content-Disposition': `attachment; filename="lumin-bookmarks-${date}.json"`,
+        },
+    })
+})
+
+// ─── POST /api/bookmarks/import ───────────────────────────────────────────────
+bookmarks.post('/import', async (c) => {
+    const user = c.get('user')
+    let body: { bookmarks?: unknown[] }
+    try { body = await c.req.json() } catch { return c.json({ error: 'invalid JSON' }, 400) }
+    if (!Array.isArray(body?.bookmarks)) return c.json({ error: 'bookmarks array required' }, 400)
+    if (body.bookmarks.length > 5000) return c.json({ error: 'max 5000 bookmarks per import' }, 400)
+
+    const { results: existing } = await c.env.DB
+        .prepare('SELECT url, slug FROM bookmarks WHERE user_id = ?')
+        .bind(user.id)
+        .all<{ url: string; slug: string }>()
+
+    const existingUrls = new Set(existing.map(r => r.url))
+    const existingSlugs = new Set(existing.map(r => r.slug))
+
+    let imported = 0, skipped = 0
+    const errors: string[] = []
+
+    for (const item of body.bookmarks) {
+        if (typeof item !== 'object' || item === null) { errors.push('invalid item'); continue }
+        const bm = item as Record<string, unknown>
+        const url = typeof bm.url === 'string' ? bm.url.trim() : ''
+        if (!url) { errors.push('missing url'); continue }
+        try { new URL(url) } catch { errors.push(`invalid url: ${url.slice(0, 80)}`); continue }
+        if (existingUrls.has(url)) { skipped++; continue }
+
+        // Resolve slug: use provided if valid, otherwise derive from hostname
+        let base = typeof bm.slug === 'string' && /^[a-z0-9_-]{1,64}$/.test(bm.slug) ? bm.slug : ''
+        if (!base) {
+            try { base = new URL(url).hostname.replace(/^www\./, '').replace(/[^a-z0-9]/g, '-').slice(0, 40) } catch { base = 'link' }
+        }
+        let slug = base, n = 2
+        while (existingSlugs.has(slug)) slug = `${base.slice(0, 58)}-${n++}`
+
+        try {
+            await c.env.DB
+                .prepare(`INSERT INTO bookmarks (user_id, url, slug, title, short_description, favicon_url, is_public, is_archived, tag_list, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+                .bind(
+                    user.id, url, slug,
+                    typeof bm.title === 'string' ? bm.title : null,
+                    typeof bm.short_description === 'string' ? bm.short_description : null,
+                    typeof bm.favicon_url === 'string' ? bm.favicon_url : null,
+                    bm.is_public ? 1 : 0,
+                    bm.is_archived ? 1 : 0,
+                    JSON.stringify(Array.isArray(bm.tag_list) ? bm.tag_list.filter(t => typeof t === 'string') : []),
+                    typeof bm.expires_at === 'string' ? bm.expires_at : null,
+                )
+                .run()
+            existingUrls.add(url)
+            existingSlugs.add(slug)
+            imported++
+        } catch (e) {
+            errors.push(`${url.slice(0, 60)}: ${e instanceof Error ? e.message : String(e)}`)
+        }
+    }
+
+    return c.json({ imported, skipped, errors: errors.slice(0, 20) })
 })
 
 // ─── GET /api/bookmarks/:id ───────────────────────────────────────────────────

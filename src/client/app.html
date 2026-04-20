@@ -529,6 +529,26 @@
         </div>
     </div>
 
+    <!-- Import Bookmarks modal (result) -->
+    <div id="import-result-modal"
+        class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center px-4">
+        <div class="bg-white rounded-[24px] p-8 max-w-sm w-full shadow-soft fade-in">
+            <div class="w-12 h-12 bg-blue-50 rounded-[12px] flex items-center justify-center mb-4">
+                <svg class="w-6 h-6 text-g-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+            </div>
+            <h3 class="text-xl font-semibold text-g-black mb-4">Import Complete</h3>
+            <div id="import-result-body" class="space-y-2 text-sm mb-6"></div>
+            <button onclick="closeImportResultModal()"
+                class="w-full bg-g-blue text-white font-semibold py-2.5 rounded-full hover:bg-blue-600 transition-all text-sm">Done</button>
+        </div>
+    </div>
+
+    <!-- hidden file input for import -->
+    <input type="file" id="import-file-input" accept=".json" class="hidden" onchange="handleImportFile(event)">
+
     <!-- Rename Tag modal -->
     <div id="rename-tag-modal"
         class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center px-4">
@@ -624,6 +644,12 @@
                             <button onclick="openRenameTagModal(); toggleUserMenu()"
                                 class="w-full text-left px-4 py-2 text-sm text-g-gray hover:bg-[#F3F4F6] transition-colors">Rename
                                 Tag</button>
+                            <button onclick="doExportBookmarks(); toggleUserMenu()"
+                                class="w-full text-left px-4 py-2 text-sm text-g-gray hover:bg-[#F3F4F6] transition-colors">Export
+                                Bookmarks</button>
+                            <button onclick="openImportFile(); toggleUserMenu()"
+                                class="w-full text-left px-4 py-2 text-sm text-g-gray hover:bg-[#F3F4F6] transition-colors">Import
+                                Bookmarks</button>
                             <button onclick="copyLoginLink()"
                                 class="w-full text-left px-4 py-2 text-sm text-g-gray hover:bg-[#F3F4F6] transition-colors">Copy
                                 Login Link</button>
@@ -795,6 +821,12 @@
                 <button onclick="openRenameTagModal(); toggleMobileUserMenu()"
                     class="w-full text-left px-4 py-2.5 text-sm text-g-gray hover:bg-[#F3F4F6] transition-colors">Rename
                     Tag</button>
+                <button onclick="doExportBookmarks(); toggleMobileUserMenu()"
+                    class="w-full text-left px-4 py-2.5 text-sm text-g-gray hover:bg-[#F3F4F6] transition-colors">Export
+                    Bookmarks</button>
+                <button onclick="openImportFile(); toggleMobileUserMenu()"
+                    class="w-full text-left px-4 py-2.5 text-sm text-g-gray hover:bg-[#F3F4F6] transition-colors">Import
+                    Bookmarks</button>
                 <button onclick="copyLoginLink(); toggleMobileUserMenu()"
                     class="w-full text-left px-4 py-2.5 text-sm text-g-gray hover:bg-[#F3F4F6] transition-colors">Copy
                     Login Link</button>
@@ -1222,6 +1254,68 @@
             clearAuthCookie()
             S.token = null; S.user = null
             location.reload()
+        }
+
+        // ── Export / Import ───────────────────────────────────────────────────────────
+        async function doExportBookmarks() {
+            try {
+                const res = await api('GET', '/api/bookmarks/export')
+                if (!res.ok) { toast('Export failed.', 'error'); return }
+                const blob = await res.blob()
+                const date = new Date().toISOString().split('T')[0]
+                const a = document.createElement('a')
+                a.href = URL.createObjectURL(blob)
+                a.download = `lumin-bookmarks-${date}.json`
+                a.click()
+                URL.revokeObjectURL(a.href)
+                toast('Bookmarks exported!')
+            } catch { toast('Export failed.', 'error') }
+        }
+
+        function openImportFile() {
+            qs('#import-file-input').value = ''
+            qs('#import-file-input').click()
+        }
+
+        async function handleImportFile(e) {
+            const file = e.target.files?.[0]
+            if (!file) return
+            let data
+            try {
+                const text = await file.text()
+                data = JSON.parse(text)
+            } catch { toast('Could not read file — make sure it is a valid JSON export.', 'error'); return }
+
+            // Accept both a raw array and our { bookmarks: [...] } wrapper
+            const list = Array.isArray(data) ? data : Array.isArray(data?.bookmarks) ? data.bookmarks : null
+            if (!list) { toast('File format not recognized.', 'error'); return }
+
+            const res = await api('POST', '/api/bookmarks/import', { bookmarks: list })
+            const result = await res.json()
+            if (!res.ok) { toast(result.error || 'Import failed.', 'error'); return }
+
+            const { imported, skipped, errors } = result
+            const body = qs('#import-result-body')
+            body.innerHTML = `
+                <div class="flex justify-between bg-green-50 rounded-[10px] px-4 py-2.5">
+                    <span class="font-medium text-green-800">Imported</span>
+                    <span class="font-bold text-green-700">${imported}</span>
+                </div>
+                <div class="flex justify-between bg-gray-50 rounded-[10px] px-4 py-2.5">
+                    <span class="font-medium text-g-gray">Skipped (duplicates)</span>
+                    <span class="font-bold text-g-gray">${skipped}</span>
+                </div>
+                ${errors?.length ? `<div class="bg-red-50 rounded-[10px] px-4 py-2.5 text-xs text-red-700"><strong>${errors.length} error${errors.length !== 1 ? 's' : ''}</strong><ul class="mt-1 list-disc pl-4 space-y-0.5">${errors.map(err => `<li>${escHtml(String(err))}</li>`).join('')}</ul></div>` : ''}
+            `
+            showEl('import-result-modal')
+            if (imported > 0) {
+                await loadTags()
+                await loadBookmarks(1)
+            }
+        }
+
+        function closeImportResultModal() {
+            hideEl('import-result-modal')
         }
 
         // ── Rename Tag ────────────────────────────────────────────────────────────────
