@@ -14,6 +14,8 @@ import { getCookie } from 'hono/cookie'
 import appHtml from './client/app.html'
 // @ts-expect-error — text module loaded by Wrangler rule
 import stationHtml from './client/station.html'
+// @ts-expect-error — text module loaded by Wrangler rule
+import importPinboardHtml from './client/import-pinboard.html'
 
 // ─── Environment bindings (declared in wrangler.toml) ─────────────────────────
 export type Env = {
@@ -229,6 +231,7 @@ app.get('/api/v/:dashboardTag', async (c) => {
 app.get('/', (c) => c.html(appHtml as string))
 app.get('/add', (c) => c.html(appHtml as string))
 app.get('/v/:dashboardTag', (c) => c.html(stationHtml as string))
+app.get('/import/pinboard', (c) => c.html(importPinboardHtml as string))
 
 // ─── 404 catch-all ────────────────────────────────────────────────────────────
 app.notFound((c) => c.json({ error: 'Not Found' }, 404))

@@ -140,12 +140,14 @@ bookmarks.get('/export', async (c) => {
 })
 
 // ─── POST /api/bookmarks/import ───────────────────────────────────────────────
+// Accepts { bookmarks: [...] } — max 100 per call (client must batch).
+// Returns { imported, skipped, errors[] }.
 bookmarks.post('/import', async (c) => {
     const user = c.get('user')
     let body: { bookmarks?: unknown[] }
     try { body = await c.req.json() } catch { return c.json({ error: 'invalid JSON' }, 400) }
     if (!Array.isArray(body?.bookmarks)) return c.json({ error: 'bookmarks array required' }, 400)
-    if (body.bookmarks.length > 5000) return c.json({ error: 'max 5000 bookmarks per import' }, 400)
+    if (body.bookmarks.length > 100) return c.json({ error: 'max 100 bookmarks per call — batch on the client' }, 400)
 
     const { results: existing } = await c.env.DB
         .prepare('SELECT url, slug FROM bookmarks WHERE user_id = ?')
@@ -155,7 +157,8 @@ bookmarks.post('/import', async (c) => {
     const existingUrls = new Set(existing.map(r => r.url))
     const existingSlugs = new Set(existing.map(r => r.slug))
 
-    let imported = 0, skipped = 0
+    const stmts: D1PreparedStatement[] = []
+    let skipped = 0
     const errors: string[] = []
 
     for (const item of body.bookmarks) {
@@ -174,8 +177,8 @@ bookmarks.post('/import', async (c) => {
         let slug = base, n = 2
         while (existingSlugs.has(slug)) slug = `${base.slice(0, 58)}-${n++}`
 
-        try {
-            await c.env.DB
+        stmts.push(
+            c.env.DB
                 .prepare(`INSERT INTO bookmarks (user_id, url, slug, title, short_description, favicon_url, is_public, is_archived, tag_list, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
                 .bind(
                     user.id, url, slug,
@@ -187,12 +190,18 @@ bookmarks.post('/import', async (c) => {
                     JSON.stringify(Array.isArray(bm.tag_list) ? bm.tag_list.filter(t => typeof t === 'string') : []),
                     typeof bm.expires_at === 'string' ? bm.expires_at : null,
                 )
-                .run()
-            existingUrls.add(url)
-            existingSlugs.add(slug)
-            imported++
+        )
+        existingUrls.add(url)
+        existingSlugs.add(slug)
+    }
+
+    let imported = 0
+    if (stmts.length > 0) {
+        try {
+            await c.env.DB.batch(stmts)
+            imported = stmts.length
         } catch (e) {
-            errors.push(`${url.slice(0, 60)}: ${e instanceof Error ? e.message : String(e)}`)
+            errors.push(e instanceof Error ? e.message : String(e))
         }
     }
 

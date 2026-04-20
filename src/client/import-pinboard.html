@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Import from Pinboard — Lumin</title>
+    <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="shortcut icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        g: { blue: '#4285F4', black: '#1F1F1F', gray: '#474747', border: '#E3E3E3', surface: '#FFFFFF' }
+                    },
+                    fontFamily: { sans: ['Inter', 'Roboto', 'sans-serif'] },
+                }
+            }
+        }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .spinner {
+            border: 2px solid #E3E3E3;
+            border-top-color: #4285F4;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin .7s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.18s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(6px);
+            }
+
+            to {
+                opacity: 1;
+                transform: none;
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-[#F0F2F5] font-sans text-g-black antialiased min-h-screen flex flex-col">
+
+    <!-- ── Nav ── -->
+    <header class="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-g-border flex-shrink-0">
+        <div class="max-w-2xl mx-auto px-6 h-14 flex items-center gap-3">
+            <a href="/" class="flex-shrink-0">
+                <img src="/lumin_logo.png" alt="Lumin" class="h-8 w-auto">
+            </a>
+            <span class="text-g-border select-none">|</span>
+            <h1 class="text-sm font-semibold text-g-black flex-1">Import from Pinboard</h1>
+            <a href="/" class="flex items-center gap-1.5 text-xs text-g-gray hover:text-g-blue transition-colors">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+                Dashboard
+            </a>
+        </div>
+    </header>
+
+    <!-- ── Auth gate ── -->
+    <div id="auth-gate" class="hidden flex-1 flex items-center justify-center px-6 py-20">
+        <div class="bg-white rounded-[24px] p-8 max-w-sm w-full shadow-sm text-center">
+            <div class="w-12 h-12 bg-red-50 rounded-[12px] flex items-center justify-center mx-auto mb-4">
+                <svg class="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+            </div>
+            <p class="font-semibold text-g-black mb-1">Sign in required</p>
+            <p class="text-sm text-g-gray mb-5">You need to be logged in to import bookmarks.</p>
+            <a href="/"
+                class="inline-block bg-g-blue text-white font-semibold px-6 py-2.5 rounded-full text-sm hover:bg-blue-600 transition-all">
+                Go to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- ── Main content ── -->
+    <main id="app" class="hidden flex-1 flex flex-col items-center justify-start px-6 py-10">
+
+        <!-- ══ Phase 1: File select ══ -->
+        <div id="phase-select" class="w-full max-w-xl fade-in">
+            <div class="bg-white rounded-[24px] p-8 shadow-sm">
+                <div class="w-12 h-12 bg-blue-50 rounded-[12px] flex items-center justify-center mb-5">
+                    <svg class="w-6 h-6 text-g-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                </div>
+                <h2 class="text-xl font-semibold text-g-black mb-1">Select your Pinboard export</h2>
+                <p class="text-sm text-g-gray mb-6 leading-relaxed">
+                    Export your bookmarks from Pinboard as JSON
+                    (<a href="https://pinboard.in/export/" target="_blank" rel="noopener"
+                        class="text-g-blue hover:underline">pinboard.in/export/</a>),
+                    then select the downloaded file below. Duplicate URLs are automatically skipped.
+                </p>
+
+                <!-- Drop zone -->
+                <label id="drop-zone"
+                    class="flex flex-col items-center justify-center gap-3 border-2 border-dashed border-g-border rounded-[16px] px-6 py-10 cursor-pointer hover:border-g-blue hover:bg-blue-50/30 transition-all">
+                    <svg class="w-8 h-8 text-g-gray" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                            d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span class="text-sm text-g-gray text-center">
+                        <span class="font-medium text-g-blue">Choose a file</span> or drag and drop<br>
+                        <span class="text-xs">.json export from Pinboard</span>
+                    </span>
+                    <input type="file" id="file-input" accept=".json" class="hidden">
+                </label>
+
+                <div id="file-error"
+                    class="hidden mt-3 text-xs text-red-600 bg-red-50 border border-red-100 rounded-[8px] px-3 py-2">
+                </div>
+            </div>
+
+            <!-- Preview card (shown after file is read) -->
+            <div id="preview-card" class="hidden mt-4 bg-white rounded-[24px] p-6 shadow-sm fade-in">
+                <div class="flex items-start justify-between gap-4 mb-5">
+                    <div>
+                        <p class="text-xs font-semibold text-g-gray uppercase tracking-wide mb-1">Ready to import</p>
+                        <p class="font-semibold text-g-black truncate" id="preview-filename"></p>
+                    </div>
+                    <button onclick="resetFile()"
+                        class="text-xs text-g-gray hover:text-red-500 transition-colors flex-shrink-0 mt-1">✕
+                        clear</button>
+                </div>
+                <div class="grid grid-cols-3 gap-3 mb-5">
+                    <div class="bg-[#F8F9FA] rounded-[12px] px-4 py-3 text-center">
+                        <p class="text-xl font-bold text-g-black" id="preview-total">0</p>
+                        <p class="text-xs text-g-gray mt-0.5">Bookmarks</p>
+                    </div>
+                    <div class="bg-[#F8F9FA] rounded-[12px] px-4 py-3 text-center">
+                        <p class="text-xl font-bold text-g-black" id="preview-tags">0</p>
+                        <p class="text-xs text-g-gray mt-0.5">Unique Tags</p>
+                    </div>
+                    <div class="bg-[#F8F9FA] rounded-[12px] px-4 py-3 text-center">
+                        <p class="text-xl font-bold text-g-black" id="preview-batches">0</p>
+                        <p class="text-xs text-g-gray mt-0.5">Batches</p>
+                    </div>
+                </div>
+                <button onclick="startImport()"
+                    class="w-full bg-g-blue text-white font-semibold py-3 rounded-full hover:bg-blue-600 transition-all text-sm">
+                    Start Import
+                </button>
+            </div>
+        </div>
+
+        <!-- ══ Phase 2: Progress ══ -->
+        <div id="phase-progress" class="hidden w-full max-w-xl fade-in">
+            <div class="bg-white rounded-[24px] p-8 shadow-sm">
+                <div class="w-12 h-12 bg-blue-50 rounded-[12px] flex items-center justify-center mb-5">
+                    <div class="spinner"></div>
+                </div>
+                <h2 class="text-xl font-semibold text-g-black mb-1">Importing…</h2>
+                <p class="text-sm text-g-gray mb-6" id="progress-label">Preparing…</p>
+
+                <!-- Progress bar -->
+                <div class="w-full bg-[#F0F2F5] rounded-full h-2.5 mb-3">
+                    <div id="progress-bar" class="bg-g-blue h-2.5 rounded-full transition-all duration-300"
+                        style="width:0%"></div>
+                </div>
+                <div class="flex justify-between text-xs text-g-gray">
+                    <span id="progress-count">0 imported</span>
+                    <span id="progress-pct">0%</span>
+                </div>
+
+                <button onclick="cancelImport()"
+                    class="mt-6 w-full border border-g-border text-g-gray font-medium py-2.5 rounded-full hover:border-red-300 hover:text-red-500 transition-all text-sm">
+                    Cancel
+                </button>
+            </div>
+        </div>
+
+        <!-- ══ Phase 3: Done ══ -->
+        <div id="phase-done" class="hidden w-full max-w-xl fade-in">
+            <div class="bg-white rounded-[24px] p-8 shadow-sm">
+                <div class="w-12 h-12 bg-green-50 rounded-[12px] flex items-center justify-center mb-5">
+                    <svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                    </svg>
+                </div>
+                <h2 class="text-xl font-semibold text-g-black mb-5" id="done-title">Import complete</h2>
+
+                <div class="space-y-2 mb-6">
+                    <div class="flex justify-between items-center bg-green-50 rounded-[12px] px-4 py-3">
+                        <span class="text-sm font-medium text-green-800">Imported</span>
+                        <span class="text-lg font-bold text-green-700" id="done-imported">0</span>
+                    </div>
+                    <div class="flex justify-between items-center bg-[#F8F9FA] rounded-[12px] px-4 py-3">
+                        <span class="text-sm font-medium text-g-gray">Skipped (duplicates)</span>
+                        <span class="text-lg font-bold text-g-gray" id="done-skipped">0</span>
+                    </div>
+                    <div id="done-errors-row"
+                        class="hidden flex justify-between items-center bg-red-50 rounded-[12px] px-4 py-3">
+                        <span class="text-sm font-medium text-red-700">Errors</span>
+                        <span class="text-lg font-bold text-red-600" id="done-error-count">0</span>
+                    </div>
+                </div>
+
+                <!-- Error detail -->
+                <div id="done-errors-detail"
+                    class="hidden mb-5 bg-red-50 border border-red-100 rounded-[12px] px-4 py-3">
+                    <p class="text-xs font-semibold text-red-700 mb-2">Error details (first 20):</p>
+                    <ul id="done-errors-list" class="text-xs text-red-600 space-y-1 list-disc pl-4"></ul>
+                </div>
+
+                <div class="flex gap-3">
+                    <button onclick="resetAll()"
+                        class="flex-1 border border-g-border text-g-gray font-medium py-2.5 rounded-full hover:border-g-blue hover:text-g-blue transition-all text-sm">
+                        Import Another
+                    </button>
+                    <a href="/"
+                        class="flex-1 bg-g-blue text-white font-semibold py-2.5 rounded-full hover:bg-blue-600 transition-all text-sm flex items-center justify-center">
+                        Go to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cancelled state -->
+        <div id="phase-cancelled" class="hidden w-full max-w-xl fade-in">
+            <div class="bg-white rounded-[24px] p-8 shadow-sm text-center">
+                <p class="text-g-gray text-sm mb-4">Import cancelled. <span id="cancel-partial"
+                        class="text-g-black font-medium"></span></p>
+                <button onclick="resetAll()"
+                    class="bg-g-blue text-white font-semibold px-8 py-2.5 rounded-full hover:bg-blue-600 transition-all text-sm">
+                    Start Over
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // ── State ─────────────────────────────────────────────────────────────
+        let pins = []           // parsed pinboard items
+        let token = ''
+        let cancelled = false
+        let totalImported = 0
+        let totalSkipped = 0
+        const allErrors = []
+
+        const BATCH_SIZE = 100
+
+        // ── Helpers ───────────────────────────────────────────────────────────
+        function qs(sel) { return document.querySelector(sel) }
+        function showEl(id) { qs('#' + id)?.classList.remove('hidden') }
+        function hideEl(id) { qs('#' + id)?.classList.add('hidden') }
+        function escHtml(s) {
+            return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+        }
+
+        // ── Auth check ────────────────────────────────────────────────────────
+        function getToken() {
+            const match = document.cookie.split(';').map(c => c.trim()).find(c => c.startsWith('d11_auth='))
+            return match ? decodeURIComponent(match.slice('d11_auth='.length)) : ''
+        }
+
+        token = getToken()
+        if (!token) {
+            showEl('auth-gate')
+        } else {
+            showEl('app')
+        }
+
+        // ── File input / drop zone ────────────────────────────────────────────
+        const fileInput = qs('#file-input')
+        const dropZone = qs('#drop-zone')
+
+        fileInput.addEventListener('change', e => handleFile(e.target.files[0]))
+
+        dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('border-g-blue', 'bg-blue-50/30') })
+        dropZone.addEventListener('dragleave', () => { dropZone.classList.remove('border-g-blue', 'bg-blue-50/30') })
+        dropZone.addEventListener('drop', e => {
+            e.preventDefault()
+            dropZone.classList.remove('border-g-blue', 'bg-blue-50/30')
+            const f = e.dataTransfer?.files[0]
+            if (f) handleFile(f)
+        })
+
+        async function handleFile(file) {
+            if (!file) return
+            hideEl('file-error')
+            hideEl('preview-card')
+
+            let data
+            try {
+                const text = await file.text()
+                data = JSON.parse(text)
+            } catch {
+                showFileError('Could not parse file — make sure it is the Pinboard JSON export.')
+                return
+            }
+
+            if (!Array.isArray(data)) {
+                showFileError('Expected a JSON array. Is this the correct Pinboard export file?')
+                return
+            }
+
+            // Convert pinboard format → Lumin format
+            pins = data
+                .map(p => convertPin(p))
+                .filter(p => p !== null)
+
+            if (pins.length === 0) {
+                showFileError('No valid bookmarks found in this file.')
+                return
+            }
+
+            const tagSet = new Set()
+            pins.forEach(p => p.tag_list.forEach(t => tagSet.add(t)))
+            const batches = Math.ceil(pins.length / BATCH_SIZE)
+
+            qs('#preview-filename').textContent = file.name
+            qs('#preview-total').textContent = pins.length.toLocaleString()
+            qs('#preview-tags').textContent = tagSet.size.toLocaleString()
+            qs('#preview-batches').textContent = batches.toLocaleString()
+            showEl('preview-card')
+        }
+
+        function showFileError(msg) {
+            const el = qs('#file-error')
+            el.textContent = msg
+            showEl('file-error')
+        }
+
+        // ── Pinboard → Lumin conversion ───────────────────────────────────────
+        function convertPin(p) {
+            if (typeof p !== 'object' || p === null) return null
+            const url = typeof p.href === 'string' ? p.href.trim() : ''
+            if (!url) return null
+            try { new URL(url) } catch { return null }
+
+            // Space-separated tags → array, filter empty strings
+            const tag_list = typeof p.tags === 'string'
+                ? p.tags.split(' ').map(t => t.trim()).filter(t => t.length > 0)
+                : []
+
+            // Slug from pinboard hash (first 8 chars) — route will resolve conflicts
+            const hashBase = typeof p.hash === 'string' ? p.hash.slice(0, 8).toLowerCase().replace(/[^a-z0-9]/g, '') : ''
+
+            return {
+                url,
+                slug: hashBase || undefined,
+                title: typeof p.description === 'string' && p.description.trim() ? p.description.trim() : null,
+                short_description: typeof p.extended === 'string' && p.extended.trim() ? p.extended.trim() : null,
+                favicon_url: null,
+                is_public: p.shared === 'yes',
+                is_archived: false,
+                tag_list,
+                expires_at: null,
+                // preserve created_at by passing via the import route if we ever support it
+                // (current schema sets created_at server-side, acceptable tradeoff)
+            }
+        }
+
+        // ── Import flow ───────────────────────────────────────────────────────
+        async function startImport() {
+            if (pins.length === 0) return
+            cancelled = false
+            totalImported = 0
+            totalSkipped = 0
+            allErrors.length = 0
+
+            hideEl('phase-select')
+            showEl('phase-progress')
+
+            const batches = []
+            for (let i = 0; i < pins.length; i += BATCH_SIZE) {
+                batches.push(pins.slice(i, i + BATCH_SIZE))
+            }
+
+            for (let i = 0; i < batches.length; i++) {
+                if (cancelled) break
+
+                const pct = Math.round((i / batches.length) * 100)
+                qs('#progress-bar').style.width = pct + '%'
+                qs('#progress-pct').textContent = pct + '%'
+                qs('#progress-label').textContent = `Batch ${i + 1} of ${batches.length}…`
+                qs('#progress-count').textContent = `${totalImported.toLocaleString()} imported`
+
+                try {
+                    const res = await fetch('/api/bookmarks/import', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': 'Bearer ' + token,
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ bookmarks: batches[i] }),
+                    })
+                    const data = await res.json()
+                    if (!res.ok) {
+                        allErrors.push(`Batch ${i + 1}: ${data.error || 'request failed'}`)
+                    } else {
+                        totalImported += data.imported ?? 0
+                        totalSkipped += data.skipped ?? 0
+                        if (Array.isArray(data.errors)) allErrors.push(...data.errors)
+                    }
+                } catch (e) {
+                    allErrors.push(`Batch ${i + 1}: network error — ${e.message}`)
+                }
+            }
+
+            hideEl('phase-progress')
+
+            if (cancelled) {
+                qs('#cancel-partial').textContent = totalImported > 0
+                    ? `${totalImported.toLocaleString()} bookmark${totalImported !== 1 ? 's' : ''} were saved before cancellation.`
+                    : ''
+                showEl('phase-cancelled')
+            } else {
+                showResults()
+            }
+        }
+
+        function cancelImport() {
+            cancelled = true
+        }
+
+        function showResults() {
+            qs('#done-imported').textContent = totalImported.toLocaleString()
+            qs('#done-skipped').textContent = totalSkipped.toLocaleString()
+            qs('#progress-bar').style.width = '100%'
+
+            if (allErrors.length > 0) {
+                showEl('done-errors-row')
+                qs('#done-error-count').textContent = allErrors.length.toLocaleString()
+                showEl('done-errors-detail')
+                qs('#done-errors-list').innerHTML = allErrors.slice(0, 20).map(e => `<li>${escHtml(e)}</li>`).join('')
+            }
+
+            qs('#done-title').textContent = totalImported > 0 ? 'Import complete!' : 'Nothing new to import'
+            showEl('phase-done')
+        }
+
+        // ── Reset ─────────────────────────────────────────────────────────────
+        function resetFile() {
+            pins = []
+            fileInput.value = ''
+            hideEl('preview-card')
+            hideEl('file-error')
+        }
+
+        function resetAll() {
+            resetFile()
+            totalImported = 0
+            totalSkipped = 0
+            allErrors.length = 0
+            cancelled = false
+            qs('#done-errors-row').classList.add('hidden')
+            qs('#done-errors-detail').classList.add('hidden')
+            qs('#done-errors-list').innerHTML = ''
+            qs('#progress-bar').style.width = '0%'
+            hideEl('phase-done')
+            hideEl('phase-cancelled')
+            showEl('phase-select')
+        }
+    </script>
+</body>
+
+</html>
