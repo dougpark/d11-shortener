@@ -152,6 +152,45 @@ bookmarks.get('/tags/all', async (c) => {
     return c.json({ data: tags })
 })
 
+// ─── POST /api/bookmarks/tags/rename ─────────────────────────────────────────
+// Body: { from: string, to: string }
+// Replaces tag "from" with "to" across all bookmarks for the user.
+// If "to" already exists on a bookmark it is deduplicated (merge).
+bookmarks.post('/tags/rename', async (c) => {
+    const user = c.get('user')
+    const body = await c.req.json<{ from?: string; to?: string }>()
+    const fromTag = (body.from ?? '').trim()
+    const toTag = (body.to ?? '').trim()
+
+    if (!fromTag) return c.json({ error: '"from" tag is required' }, 400)
+    if (!toTag) return c.json({ error: '"to" tag is required' }, 400)
+    if (fromTag === toTag) return c.json({ error: '"from" and "to" tags must differ' }, 400)
+
+    // Fetch bookmarks containing the from-tag using parameterised LIKE
+    const likePattern = `%"${fromTag}"%`
+    const result = await c.env.DB
+        .prepare(`SELECT id, tag_list FROM bookmarks WHERE user_id = ? AND tag_list LIKE ?`)
+        .bind(user.id, likePattern)
+        .all<{ id: number; tag_list: string }>()
+
+    let updated = 0
+    for (const row of result.results) {
+        let tags: string[] = []
+        try { tags = JSON.parse(row.tag_list) } catch { continue }
+        if (!tags.includes(fromTag)) continue
+
+        // Replace fromTag with toTag, deduplicating in case toTag already present
+        const newTags = [...new Set(tags.map(t => t === fromTag ? toTag : t))]
+        await c.env.DB
+            .prepare(`UPDATE bookmarks SET tag_list = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id = ? AND user_id = ?`)
+            .bind(JSON.stringify(newTags), row.id, user.id)
+            .run()
+        updated++
+    }
+
+    return c.json({ updated, from: fromTag, to: toTag })
+})
+
 // ─── GET /api/bookmarks/check-slug?q=:slug ───────────────────────────────────
 bookmarks.get('/check-slug/availability', async (c) => {
     const user = c.get('user')

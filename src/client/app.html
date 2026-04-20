@@ -529,6 +529,55 @@
         </div>
     </div>
 
+    <!-- Rename Tag modal -->
+    <div id="rename-tag-modal"
+        class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center px-4">
+        <div class="bg-white rounded-[24px] p-8 max-w-md w-full shadow-soft fade-in">
+            <div class="w-12 h-12 bg-blue-50 rounded-[12px] flex items-center justify-center mb-4">
+                <svg class="w-6 h-6 text-g-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                </svg>
+            </div>
+            <h3 class="text-xl font-semibold text-g-black mb-1">Rename Tag</h3>
+            <p class="text-g-gray text-sm mb-6 leading-relaxed">Choose a tag to rename and enter a new name. All your
+                bookmarks with that tag will be updated.</p>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-g-gray mb-1.5 uppercase tracking-wide">Current
+                        Tag</label>
+                    <select id="rename-from-select"
+                        class="w-full border border-g-border rounded-[12px] px-4 py-3 text-sm focus:outline-none focus:border-g-blue bg-white">
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-g-gray mb-1.5 uppercase tracking-wide">New Tag
+                        Name</label>
+                    <input id="rename-to-input" type="text" placeholder="e.g. ai-tools" oninput="checkRenameTagMerge()"
+                        class="w-full border border-g-border rounded-[12px] px-4 py-3 text-sm focus:outline-none focus:border-g-blue transition-colors">
+                </div>
+                <div id="rename-merge-warning"
+                    class="hidden bg-amber-50 border border-amber-200 rounded-[10px] px-4 py-3 text-xs text-amber-800 leading-relaxed">
+                    <strong>This tag already exists.</strong> These tags will be merged — all bookmarks that had
+                    <span id="rename-from-label" class="font-mono"></span> will also get
+                    <span id="rename-to-label" class="font-mono"></span>. <strong>This cannot be undone.</strong>
+                </div>
+                <div id="rename-tag-error"
+                    class="hidden text-red-500 text-xs bg-red-50 border border-red-100 rounded-[8px] px-3 py-2"></div>
+            </div>
+            <div class="flex gap-3 mt-6">
+                <button onclick="closeRenameTagModal()"
+                    class="flex-1 border border-g-border text-g-black font-medium py-2.5 rounded-full hover:border-g-blue hover:text-g-blue transition-all text-sm">Cancel</button>
+                <button onclick="doRenameTag()"
+                    class="flex-1 bg-g-blue text-white font-semibold py-2.5 rounded-full hover:bg-blue-600 transition-all text-sm flex items-center justify-center gap-2">
+                    <span id="rename-tag-btn-text">Rename Tag</span>
+                    <span id="rename-tag-spinner"
+                        class="hidden spinner !border-2 !border-white/40 !border-t-white"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- ═══════════════════════════════════════════════════════════════════════════
      DASHBOARD VIEW
 ═══════════════════════════════════════════════════════════════════════════ -->
@@ -572,6 +621,9 @@
                                 <p class="text-xs font-semibold text-g-black truncate" id="menu-name">—</p>
                                 <p class="text-xs text-g-gray truncate" id="menu-prefix">—</p>
                             </div>
+                            <button onclick="openRenameTagModal(); toggleUserMenu()"
+                                class="w-full text-left px-4 py-2 text-sm text-g-gray hover:bg-[#F3F4F6] transition-colors">Rename
+                                Tag</button>
                             <button onclick="copyLoginLink()"
                                 class="w-full text-left px-4 py-2 text-sm text-g-gray hover:bg-[#F3F4F6] transition-colors">Copy
                                 Login Link</button>
@@ -740,6 +792,9 @@
                     <p class="text-xs font-semibold text-g-black truncate" id="mobile-menu-name">—</p>
                     <p class="text-xs text-g-gray truncate" id="mobile-menu-prefix">—</p>
                 </div>
+                <button onclick="openRenameTagModal(); toggleMobileUserMenu()"
+                    class="w-full text-left px-4 py-2.5 text-sm text-g-gray hover:bg-[#F3F4F6] transition-colors">Rename
+                    Tag</button>
                 <button onclick="copyLoginLink(); toggleMobileUserMenu()"
                     class="w-full text-left px-4 py-2.5 text-sm text-g-gray hover:bg-[#F3F4F6] transition-colors">Copy
                     Login Link</button>
@@ -1167,6 +1222,77 @@
             clearAuthCookie()
             S.token = null; S.user = null
             location.reload()
+        }
+
+        // ── Rename Tag ────────────────────────────────────────────────────────────────
+        function openRenameTagModal() {
+            const sel = qs('#rename-from-select')
+            sel.innerHTML = S.tags.length
+                ? S.tags.map(t => `<option value="${escAttr(t.tag)}">${escHtml(t.tag)} (${t.count})</option>`).join('')
+                : '<option value="">No tags yet</option>'
+            qs('#rename-to-input').value = ''
+            hideEl('rename-merge-warning')
+            hideEl('rename-tag-error')
+            showEl('rename-tag-modal')
+        }
+
+        function closeRenameTagModal() {
+            hideEl('rename-tag-modal')
+        }
+
+        function checkRenameTagMerge() {
+            const toVal = qs('#rename-to-input').value.trim()
+            const exists = toVal && S.tags.some(t => t.tag === toVal)
+            const fromVal = qs('#rename-from-select').value
+            if (exists && fromVal !== toVal) {
+                qs('#rename-from-label').textContent = '#' + fromVal
+                qs('#rename-to-label').textContent = '#' + toVal
+                showEl('rename-merge-warning')
+            } else {
+                hideEl('rename-merge-warning')
+            }
+        }
+
+        async function doRenameTag() {
+            const fromTag = qs('#rename-from-select').value
+            const toTag = qs('#rename-to-input').value.trim()
+            hideEl('rename-tag-error')
+            if (!fromTag) { return }
+            if (!toTag) {
+                showEl('rename-tag-error')
+                qs('#rename-tag-error').textContent = 'Please enter a new tag name.'
+                return
+            }
+            if (fromTag === toTag) {
+                showEl('rename-tag-error')
+                qs('#rename-tag-error').textContent = 'New tag name must be different.'
+                return
+            }
+            qs('#rename-tag-btn-text').textContent = 'Renaming…'
+            qs('#rename-tag-spinner').classList.remove('hidden')
+            qs('[onclick="doRenameTag()"]').disabled = true
+
+            try {
+                const res = await api('POST', '/api/bookmarks/tags/rename', { from: fromTag, to: toTag })
+                const data = await res.json()
+                if (!res.ok) {
+                    showEl('rename-tag-error')
+                    qs('#rename-tag-error').textContent = data.error || 'Rename failed.'
+                } else {
+                    closeRenameTagModal()
+                    toast(`Renamed #${fromTag} → #${toTag} on ${data.updated} bookmark${data.updated !== 1 ? 's' : ''}.`)
+                    await loadTags()
+                    await loadBookmarks(1)
+                }
+            } catch {
+                showEl('rename-tag-error')
+                qs('#rename-tag-error').textContent = 'Network error. Try again.'
+            } finally {
+                qs('#rename-tag-btn-text').textContent = 'Rename Tag'
+                qs('#rename-tag-spinner').classList.add('hidden')
+                const btn = qs('[onclick="doRenameTag()"]')
+                if (btn) btn.disabled = false
+            }
         }
 
         async function doLogin() {
