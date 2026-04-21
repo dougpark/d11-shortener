@@ -129,12 +129,11 @@ export function parseFeed(xml: string): RssItem[] {
             tagText(block, 'summary') ||
             tagText(block, 'content')
 
-        // Strip HTML tags and trim to 300 chars
+        // Strip HTML tags
         const summary = rawSummary
             .replace(/<[^>]+>/g, ' ')
             .replace(/\s+/g, ' ')
             .trim()
-            .slice(0, 300)
 
         const categories = allCategories(block)
 

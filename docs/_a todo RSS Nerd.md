@@ -132,9 +132,14 @@ In app.html:
 - app.html — nav + sidebar entries (Phase 5)
 
 ---
+## V2 plans
 
-**Ready to start with Phase 1?** It's a clean schema-only change — fast to execute, easy to verify, and unblocks everything else.
+Practical recommendation for V2 AI tagging
 
+Remove the 300-char cap → store whatever the feed provides (could be 2KB for rich Atom feeds)
+That alone meaningfully improves LLM tagging signal for most tech feeds
+Full article fetch is a separate, optional enrichment step best done lazily (e.g., only for items that get clipped, or as a background queue)
+Storage concern is minimal — even at 5KB average summary × 1800 live items = ~9MB. D1 handles that trivially.
 
 
 
