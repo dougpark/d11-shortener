@@ -331,7 +331,7 @@
                                 title="Clip to mine">${CLIP_SVG}</button>`
                     : ''
                 return `
-                <div class="flex items-center gap-1 px-2 py-1.5 -mx-2 rounded-[8px] hover:bg-blue-50 group transition-colors">
+                <div class="link-row flex items-center gap-1 px-2 py-1.5 -mx-2 rounded-[8px] hover:bg-blue-50 group transition-colors">
                     <a href="${escHtml(b.url)}" target="_blank" rel="noopener noreferrer"
                        class="flex items-center gap-2.5 flex-1 min-w-0">
                         ${faviconHtml(b)}
@@ -561,22 +561,29 @@
                 return
             }
 
-            // Tag view: filter bookmark cards
+            // Tag view: filter individual link rows within each card
             const cards = document.querySelectorAll('#card-grid > div')
             let anyVisible = false
             cards.forEach(card => {
                 if (!q) {
                     card.style.display = ''
+                    card.querySelectorAll('.link-row').forEach(row => row.style.display = '')
                     anyVisible = true
                     return
                 }
-                // Match against every link title and url within this card
-                const text = [...card.querySelectorAll('a[href]')]
-                    .map(a => (a.textContent + ' ' + a.getAttribute('href')).toLowerCase())
-                    .join(' ')
-                const match = q.split(/\s+/).every(term => text.includes(term))
-                card.style.display = match ? '' : 'none'
-                if (match) anyVisible = true
+                const terms = q.split(/\s+/)
+                const groupName = (card.querySelector('.tag-nav-btn')?.dataset.tag || '').toLowerCase()
+                const rows = card.querySelectorAll('.link-row')
+                let cardVisible = false
+                rows.forEach(row => {
+                    const link = row.querySelector('a[href]')
+                    const text = ((link?.textContent || '') + ' ' + (link?.getAttribute('href') || '') + ' ' + groupName).toLowerCase()
+                    const match = terms.every(term => text.includes(term))
+                    row.style.display = match ? '' : 'none'
+                    if (match) cardVisible = true
+                })
+                card.style.display = cardVisible ? '' : 'none'
+                if (cardVisible) anyVisible = true
             })
             if (!anyVisible && q) {
                 if (!noMatch) {
