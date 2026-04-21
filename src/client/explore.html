@@ -124,24 +124,27 @@
             return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
         }
 
-        // Extract tag from path: /v/explore → "explore"
-        const pathParts = location.pathname.replace(/\/+$/, '').split('/')
-        const dashboardTag = pathParts[pathParts.length - 1] || 'explore'
-        const displayName = dashboardTag.charAt(0).toUpperCase() + dashboardTag.slice(1)
+        // Mutable tag — changes when user clicks a group header
+        let currentTag = (() => {
+            const parts = location.pathname.replace(/\/+$/, '').split('/')
+            return parts[parts.length - 1] || 'explore'
+        })()
 
         // Mutable mode — toggled in-place without a page reload
         let currentMode = new URLSearchParams(location.search).has('community') ? 'community' : 'personal'
 
+        function syncUrl(push = false) {
+            const url = '/e/' + encodeURIComponent(currentTag) + (currentMode === 'community' ? '?community' : '')
+            if (push) history.pushState({ tag: currentTag, mode: currentMode }, '', url)
+            else history.replaceState({ tag: currentTag, mode: currentMode }, '', url)
+        }
+
         function applyMode() {
             const isCommunity = currentMode === 'community'
-            const modeSuffix = isCommunity ? ' · Community' : ' · Personal'
-            document.title = displayName + modeSuffix + ' — Lumin'
-            qs('#page-title').textContent = displayName + modeSuffix
-            qs('#empty-tag').textContent = '#' + dashboardTag
-
-            // URL stays in sync so bookmarking/sharing works
-            const cleanUrl = location.pathname + (isCommunity ? '?community' : '')
-            history.replaceState(null, '', cleanUrl)
+            const displayName = currentTag.charAt(0).toUpperCase() + currentTag.slice(1)
+            document.title = displayName + (isCommunity ? ' · Community' : ' · Personal') + ' — Lumin'
+            qs('#page-title').textContent = displayName
+            qs('#empty-tag').textContent = '#' + currentTag
 
             // Pill highlight
             const activeClass = 'flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full transition-colors bg-white text-g-blue shadow-sm'
@@ -153,12 +156,37 @@
         function setMode(mode) {
             if (mode === currentMode) return
             currentMode = mode
+            syncUrl(false)
             applyMode()
             init()
         }
 
-        // Apply initial state on load
+        // Navigate to a new tag — pushState so browser back works
+        function navigateToTag(tag) {
+            if (!tag || tag === currentTag) return
+            currentTag = tag
+            syncUrl(true)
+            applyMode()
+            init()
+        }
+
+        // Browser back / forward support
+        window.addEventListener('popstate', (e) => {
+            if (e.state) {
+                currentTag = e.state.tag || 'explore'
+                currentMode = e.state.mode || 'personal'
+            } else {
+                const parts = location.pathname.replace(/\/+$/, '').split('/')
+                currentTag = parts[parts.length - 1] || 'explore'
+                currentMode = new URLSearchParams(location.search).has('community') ? 'community' : 'personal'
+            }
+            applyMode()
+            init()
+        })
+
+        // Apply initial state and stamp the initial history entry so popstate fires on back
         applyMode()
+        syncUrl(false)
 
         // ── Favicon renderer ──────────────────────────────────────────────────
         function makeFallbackIcon(letter) {
@@ -190,10 +218,17 @@
 
             return `
                 <div class="bg-white border border-g-border rounded-[20px] p-5 card-glow">
-                    <p class="text-[11px] font-semibold text-g-gray uppercase tracking-widest mb-3 leading-none">${escHtml(group.name)}</p>
+                    <button class="tag-nav-btn text-[11px] font-semibold text-g-gray uppercase tracking-widest mb-3 leading-none hover:text-g-blue transition-colors text-left w-full cursor-pointer"
+                        data-tag="${escHtml(group.name.toLowerCase())}">#${escHtml(group.name)}</button>
                     <div class="space-y-0.5">${links}</div>
                 </div>`
         }
+
+        // Tag navigation via event delegation — safe, no inline string injection
+        document.getElementById('card-grid').addEventListener('click', e => {
+            const btn = e.target.closest('.tag-nav-btn')
+            if (btn?.dataset.tag) navigateToTag(btn.dataset.tag)
+        })
 
         // ── Init ──────────────────────────────────────────────────────────────
         async function init() {
@@ -201,7 +236,7 @@
             hideEl('empty')
             showEl('loading')
             try {
-                const apiUrl = '/api/v/' + encodeURIComponent(dashboardTag) + (currentMode === 'community' ? '?community' : '')
+                const apiUrl = '/api/e/' + encodeURIComponent(currentTag) + (currentMode === 'community' ? '?community' : '')
                 const res = await fetch(apiUrl)
                 hideEl('loading')
                 if (!res.ok) { showEl('empty'); return }
