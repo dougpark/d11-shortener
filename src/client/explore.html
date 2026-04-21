@@ -61,8 +61,8 @@
             </a>
             <!-- Back / Forward / Top -->
             <div class="flex items-center gap-0.5 flex-shrink-0">
-                <button id="nav-back" onclick="history.back()" title="Back" disabled
-                    class="p-1.5 rounded-full text-g-gray opacity-30 cursor-not-allowed transition-colors">
+                <button id="nav-back" onclick="history.back()" title="Back"
+                    class="p-1.5 rounded-full text-g-gray opacity-50 hover:opacity-100 hover:text-g-blue hover:bg-blue-50 transition-colors">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                     </svg>
@@ -178,10 +178,13 @@
             const backBtn = qs('#nav-back')
             const fwdBtn = qs('#nav-forward')
             const enabledClass = 'p-1.5 rounded-full text-g-gray hover:text-g-blue hover:bg-blue-50 transition-colors'
+            const exitClass = 'p-1.5 rounded-full text-g-gray opacity-50 hover:opacity-100 hover:text-g-blue hover:bg-blue-50 transition-colors'
             const disabledClass = 'p-1.5 rounded-full text-g-gray opacity-30 cursor-not-allowed transition-colors'
             if (backBtn) {
-                backBtn.disabled = historyDepth === 0
-                backBtn.className = historyDepth === 0 ? disabledClass : enabledClass
+                // At depth 0, back exits to previous page (app); keep enabled but visually softer
+                backBtn.disabled = false
+                backBtn.className = historyDepth === 0 ? exitClass : enabledClass
+                backBtn.title = historyDepth === 0 ? 'Back' : 'Back'
             }
             if (fwdBtn) {
                 fwdBtn.disabled = historyDepth >= historyMaxDepth
