@@ -106,6 +106,22 @@
         </div>
     </header>
 
+    <!-- ── Search bar (shown only when a tag is loaded) ── -->
+    <div id="search-bar" class="hidden bg-white border-b border-g-border">
+        <div class="max-w-7xl mx-auto px-6 py-2.5">
+            <div class="relative max-w-md">
+                <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-g-gray pointer-events-none"
+                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0" />
+                </svg>
+                <input id="search-input" type="search" autocomplete="off"
+                    class="w-full pl-9 pr-4 py-1.5 text-sm border border-g-border rounded-full focus:outline-none focus:border-g-blue bg-[#FAFAFA] transition-colors"
+                    placeholder="Filter in #…" oninput="filterCards(this.value)">
+            </div>
+        </div>
+    </div>
+
     <!-- ── Loading ── -->
     <div id="loading" class="flex items-center justify-center py-40">
         <div class="spinner"></div>
@@ -179,6 +195,9 @@
             document.title = displayName + (isCommunity ? ' · Community' : ' · Personal') + ' — Lumin'
             qs('#page-title').textContent = displayName
             qs('#empty-tag').textContent = '#' + currentTag
+            // Update search placeholder to reflect current tag
+            const si = qs('#search-input')
+            if (si) si.placeholder = 'Filter in #' + currentTag
 
             // Pill highlight
             const activeClass = 'flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full transition-colors bg-white text-g-blue shadow-sm'
@@ -421,11 +440,50 @@
                 const { groups } = await res.json()
                 if (!groups || groups.length === 0) { showEl('empty'); return }
                 qs('#card-grid').innerHTML = groups.map(renderCard).join('')
+                // Reset search and show search bar alongside the grid
+                const si = qs('#search-input')
+                if (si) si.value = ''
+                showEl('search-bar')
                 showEl('grid')
                 if (currentMode === 'community') markAlreadyClipped()
             } catch {
                 hideEl('loading')
+                hideEl('search-bar')
                 showEl('empty')
+            }
+        }
+
+        // ── Client-side card filter ───────────────────────────────────────────
+        function filterCards(query) {
+            const q = query.trim().toLowerCase()
+            const cards = document.querySelectorAll('#card-grid > div')
+            let anyVisible = false
+            cards.forEach(card => {
+                if (!q) {
+                    card.style.display = ''
+                    anyVisible = true
+                    return
+                }
+                // Match against every link title and url within this card
+                const text = [...card.querySelectorAll('a[href]')]
+                    .map(a => (a.textContent + ' ' + a.getAttribute('href')).toLowerCase())
+                    .join(' ')
+                const match = q.split(/\s+/).every(term => text.includes(term))
+                card.style.display = match ? '' : 'none'
+                if (match) anyVisible = true
+            })
+            // Show inline empty hint if nothing matches
+            let noMatch = qs('#search-no-match')
+            if (!anyVisible && q) {
+                if (!noMatch) {
+                    noMatch = document.createElement('p')
+                    noMatch.id = 'search-no-match'
+                    noMatch.className = 'col-span-full text-center text-sm text-g-gray py-10'
+                    qs('#card-grid').appendChild(noMatch)
+                }
+                noMatch.textContent = 'No results for \u201c' + query.trim() + '\u201d'
+            } else if (noMatch) {
+                noMatch.remove()
             }
         }
 
