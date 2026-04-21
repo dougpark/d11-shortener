@@ -1,4 +1,5 @@
-Link Health & Archive Status
+# Link Health & Archive Status
+
 After 20 years, many of your Pinboard links will be dead (404).
 
 The Feature: A background Bun script that "pings" your URLs once a month.

@@ -1,3 +1,4 @@
+# implement a full clean text capture of the link, preserve copy for future
 
 ## Short
 Recommendation: Use short_description for a human-readable summary (keep it reasonable, say ≤2000 chars), and wire up full_text for the raw page content if you want full-page capture. That would also let you search across full_text separately without cluttering the visible description.

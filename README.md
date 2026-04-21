@@ -113,6 +113,70 @@ The local D1 database is in `.wrangler/state/`. Run `bun run db:migrate:local` t
 
 ---
 
+## Account registration
+
+Lumin uses **token-based authentication** — there are no passwords and no email verification. Instead, a random 64-character cryptographic token is generated at registration and becomes your permanent credential. Here is the exact flow and why each step matters.
+
+### Step 1 — Choose a handle
+
+On the Create Account tab, enter a **handle** (called `slug_prefix` internally). This is a short, lowercase identifier that becomes part of every short link you create:
+
+```
+handle: dp  →  short links at  d11.me/l/dp/cowboys
+```
+
+The handle is your public namespace. It does not need to be your real name — use whatever you like. It must be 2–32 characters, lowercase alphanumeric, dashes, or underscores, and it must be unique across the system.
+
+**You can register multiple accounts** with different handles if you want separate namespaces — for example `dp-work` and `dp-personal`. Each gets its own independent token and bookmark collection.
+
+### Step 2 — Copy your token immediately
+
+After clicking **Create Account**, a modal appears showing your token — a 64-character hex string. This is the **only time the raw token is ever shown**. The server stores only a SHA-256 hash of it; the plain value is discarded immediately after the response is sent.
+
+> **If you close this modal without saving the token, you are effectively locked out.** There is no "forgot token" flow, no email reset, and no recovery option. The token is your key.
+
+Copy it to a safe place — a password manager, a secrets vault, or at minimum a secure note. The modal has a **Copy Token** button for convenience.
+
+### Step 3 — Paste it into the Sign In form to trigger browser password saving
+
+After copying the token, clicking **I've saved it — Sign In** closes the modal and takes you to the Sign In tab with the token pre-staged. You then **paste the token into the password field and submit the form**.
+
+This step is intentional and important: the browser detects a username + password form submission and offers to save the credential. Accepting that offer means your browser will auto-fill the token on future visits — you never have to find it again. The "username" the browser saves is your handle; the "password" is your token.
+
+> On Safari and some mobile browsers, the token is intentionally not auto-filled into the field on your behalf (browsers block programmatic password field writes as an anti-phishing measure). This is why the paste-and-submit step exists as a separate action rather than happening automatically.
+
+### Step 4 — The magic login link
+
+Once signed in, **Copy Login Link** (in the user menu) gives you a URL of the form:
+
+```
+https://d11.me/?token=<your-64-char-token>
+```
+
+Visiting this link on any device logs you in immediately — no typing, no paste. This is useful for:
+- Logging into a new browser or device
+- Sharing access with yourself across machines
+- Scripting or automation where a browser session is needed
+
+**Treat this link exactly like a password.** Anyone who has it has full access to your account — they can read, edit, and delete all your bookmarks and issue API tokens on your behalf. Do not paste it into chat, email it unencrypted, or commit it to a repository.
+
+The link works because the token itself is the credential. There is no separate user ID or username required — the server hashes the token from the URL, looks it up in the database, and establishes a session cookie. The handle is a label for your short-link namespace, not an identity factor in the authentication.
+
+### Why there is no "real" user ID or password
+
+Traditional auth systems tie identity to an email address or username and use a password as a proof of ownership, with a server-side reset mechanism as a fallback. That fallback is the attack surface — most account takeovers happen via password reset flows, not brute force.
+
+Lumin's model eliminates that surface entirely:
+
+- No email → no account recovery → no reset link to intercept
+- No password → no credential stuffing
+- The token hash in the database is useless to an attacker without the raw value
+- Revoking access is as simple as regenerating a token (future feature) or deleting the account row
+
+The tradeoff is that **you** are responsible for keeping the token safe. For a single-user personal tool this is the right trade.
+
+---
+
 ## How short links work
 
 Every user registers with a **slug prefix** (e.g. `dp`). When they create a bookmark with slug `cowboys`, the short link becomes:

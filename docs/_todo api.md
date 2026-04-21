@@ -1,18 +1,8 @@
 # API's
 
-## Pinboard's API is famously "no-nonsense." It uses a RESTful approach that has remained virtually unchanged for over a decade.
-
-The Token: It uses a username:TOKEN format for authentication.
-
-### Core Endpoints:
-
-/posts/add: To save a link with tags and descriptions.
-
-/posts/all: To export every bookmark you’ve ever saved (crucial for your initial import).
-
-/tags/get: To pull that list of 750 tags you’re currently wrestling with.
-
-
+## Add bookmark api
+- be able to ingest from the api
+- MCP and more add useful content to Lumin
 
 ## Useful APIs for your d11-lumin Stack
 Since you're on Bun and Cloudflare, you can integrate modern APIs that Pinboard never could.

@@ -1,5 +1,8 @@
 # Outbound: The "Personal Channel"
 
+- yes, more like this. be able to get data out by tag or search
+- feed into RAG or MCP
+
 You can turn d11-lumin into its own RSS producer so your family can "subscribe" to you.
 
 Endpoint: Create a route like d11.me/feed/[token].

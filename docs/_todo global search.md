@@ -1,4 +1,5 @@
-Global "Omni-Search"
+# Global "Omni-Search"
+
 Instead of just searching titles, make the search bar in your header work across everything.
 
 The Feature: Search titles, summaries, tags, and the full text of your R2 snapshots.

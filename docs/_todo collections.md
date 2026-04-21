@@ -1,4 +1,5 @@
-Smart Collections (Folders without Folders)
+# Smart Collections (Folders without Folders)
+
 Since you have 20 years of data and 750 tags, "Collections" can help you group disparate links for specific projects.
 
 The Feature: A "Collection" is essentially a saved search query (e.g., tag:japan AND date:2026).
