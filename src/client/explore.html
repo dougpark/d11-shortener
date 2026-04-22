@@ -48,6 +48,26 @@
                 transform: rotate(360deg);
             }
         }
+
+        #bottom-sheet {
+            transform: translateY(100%);
+            transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+        }
+
+        #bottom-sheet.open {
+            transform: translateY(0);
+        }
+
+        #sheet-backdrop {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+
+        #sheet-backdrop.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
     </style>
 </head>
 
@@ -74,7 +94,7 @@
                     </svg>
                 </button>
                 <button id="nav-top" onclick="navigateToTop()" title="Top tags"
-                    class="p-1.5 rounded-full text-g-gray hover:text-g-blue hover:bg-blue-50 transition-colors">
+                    class="hidden sm:block p-1.5 rounded-full text-g-gray hover:text-g-blue hover:bg-blue-50 transition-colors">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
@@ -82,8 +102,7 @@
                 </button>
             </div>
             <span class="text-g-border select-none">|</span>
-            <h1 id="page-title" class="text-sm font-semibold text-g-black hidden sm:block flex-shrink-0 capitalize">
-                Explore</h1>
+            <h1 id="page-title" class="text-sm font-semibold text-g-black flex-shrink-0 capitalize">Explore</h1>
             <!-- Inline search -->
             <div class="flex-1 relative min-w-0">
                 <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-g-gray pointer-events-none"
@@ -95,8 +114,9 @@
                     class="w-full pl-8 pr-4 py-1.5 text-sm border border-g-border rounded-full focus:outline-none focus:border-g-blue bg-[#FAFAFA] transition-colors"
                     placeholder="Filter tags" oninput="filterCards(this.value)">
             </div>
-            <!-- Mine / All toggle -->
-            <div class="flex items-center rounded-full border border-g-border bg-[#F8F9FA] p-0.5 gap-0.5 flex-shrink-0">
+            <!-- Mine / All toggle (desktop) -->
+            <div
+                class="hidden sm:flex items-center rounded-full border border-g-border bg-[#F8F9FA] p-0.5 gap-0.5 flex-shrink-0">
                 <button id="btn-mine" onclick="setMode('personal')"
                     class="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full transition-colors">
                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -114,16 +134,102 @@
                     All
                 </button>
             </div>
+            <!-- Dashboard link (desktop) -->
             <a href="/" title="Back to dashboard"
-                class="flex items-center gap-1.5 text-xs text-g-gray hover:text-g-blue transition-colors">
+                class="hidden sm:flex items-center gap-1.5 text-xs text-g-gray hover:text-g-blue transition-colors">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                 </svg>
                 Dashboard
             </a>
+            <!-- ⋯ More (mobile only) -->
+            <button onclick="openSheet()" title="More"
+                class="sm:hidden p-1.5 rounded-full text-g-gray hover:text-g-blue hover:bg-blue-50 transition-colors flex-shrink-0">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z" />
+                </svg>
+            </button>
         </div>
     </header>
+
+    <!-- ── Sheet backdrop ── -->
+    <div id="sheet-backdrop" onclick="closeSheet()" class="fixed inset-0 bg-black/40 z-40"></div>
+
+    <!-- ── Bottom sheet (mobile) ── -->
+    <div id="bottom-sheet" class="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-[20px] shadow-2xl">
+        <div class="flex justify-center pt-3 pb-1">
+            <div class="w-10 h-1 bg-g-border rounded-full"></div>
+        </div>
+        <div class="flex items-center justify-between px-5 py-2">
+            <span class="text-sm font-semibold text-g-black">More</span>
+            <button onclick="closeSheet()"
+                class="w-9 h-9 flex items-center justify-center rounded-full bg-[#F3F4F6] text-g-gray hover:bg-[#E5E7EB] active:bg-[#D1D5DB] transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+        <div class="px-4 pb-10 flex flex-col gap-1">
+            <button onclick="navigateToTop(); closeSheet()"
+                class="flex items-center gap-4 px-4 py-3 rounded-[12px] hover:bg-[#F3F4F6] active:bg-[#E5E7EB] transition-colors text-left w-full">
+                <div
+                    class="w-10 h-10 rounded-[10px] bg-blue-50 flex items-center justify-center text-g-blue flex-shrink-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                    </svg>
+                </div>
+                <div>
+                    <p class="font-medium text-sm text-g-black">All Topics</p>
+                    <p class="text-xs text-g-gray">Browse all tags</p>
+                </div>
+            </button>
+            <button onclick="setMode('personal'); closeSheet()"
+                class="flex items-center gap-4 px-4 py-3 rounded-[12px] hover:bg-[#F3F4F6] active:bg-[#E5E7EB] transition-colors text-left w-full">
+                <div
+                    class="w-10 h-10 rounded-[10px] bg-blue-50 flex items-center justify-center text-g-blue flex-shrink-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                </div>
+                <div>
+                    <p class="font-medium text-sm text-g-black">Mine</p>
+                    <p class="text-xs text-g-gray">Your bookmarks only</p>
+                </div>
+            </button>
+            <button onclick="setMode('community'); closeSheet()"
+                class="flex items-center gap-4 px-4 py-3 rounded-[12px] hover:bg-[#F3F4F6] active:bg-[#E5E7EB] transition-colors text-left w-full">
+                <div
+                    class="w-10 h-10 rounded-[10px] bg-blue-50 flex items-center justify-center text-g-blue flex-shrink-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zM3 20v-2a3 3 0 015.356-1.857" />
+                    </svg>
+                </div>
+                <div>
+                    <p class="font-medium text-sm text-g-black">All</p>
+                    <p class="text-xs text-g-gray">Everyone's bookmarks</p>
+                </div>
+            </button>
+            <a href="/"
+                class="flex items-center gap-4 px-4 py-3 rounded-[12px] hover:bg-[#F3F4F6] active:bg-[#E5E7EB] transition-colors">
+                <div
+                    class="w-10 h-10 rounded-[10px] bg-[#F3F4F6] flex items-center justify-center text-g-gray flex-shrink-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                    </svg>
+                </div>
+                <div>
+                    <p class="font-medium text-sm text-g-black">Dashboard</p>
+                    <p class="text-xs text-g-gray">Your bookmarks</p>
+                </div>
+            </a>
+        </div>
+    </div>
 
     <!-- ── Loading ── -->
     <div id="loading" class="flex items-center justify-center py-40">
@@ -156,6 +262,17 @@
         function hideEl(id) { qs('#' + id)?.classList.add('hidden') }
         function escHtml(s) {
             return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+        }
+
+        function openSheet() {
+            qs('#bottom-sheet').classList.add('open')
+            qs('#sheet-backdrop').classList.add('open')
+            document.body.style.overflow = 'hidden'
+        }
+        function closeSheet() {
+            qs('#bottom-sheet').classList.remove('open')
+            qs('#sheet-backdrop').classList.remove('open')
+            document.body.style.overflow = ''
         }
 
         // Mutable tag — changes when user clicks a group header; '' = landing/top-tags view
