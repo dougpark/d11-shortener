@@ -505,6 +505,7 @@
                     data-title="${escHtml(item.title || '')}"
                     data-tags="${escHtml(JSON.stringify(tagsArr))}"
                     title="Clip to mine">${CLIP_SVG}</button>`
+                const displaySummary = item.ai_summary || item.summary
 
                 return `
                 <div class="link-row group flex flex-col gap-1 px-2 py-2 -mx-2 rounded-[8px] hover:bg-blue-50 transition-colors">
@@ -515,7 +516,7 @@
                         </a>
                         ${clipBtn}
                     </div>
-                    ${item.summary ? `<p class="text-xs text-g-gray leading-relaxed line-clamp-2">${escHtml(item.summary)}</p>` : ''}
+                    ${displaySummary ? `<p class="text-xs text-g-gray leading-relaxed line-clamp-2">${escHtml(displaySummary)}</p>` : ''}
                     <div class="flex items-center gap-2 mt-0.5">
                         ${freshBadge}
                         ${relTime ? `<span class="text-[10px] text-g-gray/70">${escHtml(relTime)}</span>` : ''}
@@ -587,7 +588,11 @@
                 ? `<span class="text-[10px] text-g-gray/60 flex-shrink-0">${escHtml(item.feed_name)}</span>`
                 : ''
             const tagsArr = (() => { try { return JSON.parse(item.tag_list || '[]') } catch { return [] } })()
-            const primaryTags = [...new Set(tagsArr.map(t => t.split(':')[0].toLowerCase()))].slice(0, 5)
+            const aiTagsArr = (() => { try { return JSON.parse(item.ai_tags || '[]') } catch { return [] } })()
+            const primaryTags = [...new Set([
+                ...aiTagsArr.map(t => t.split(':')[0].toLowerCase()),
+                ...tagsArr.map(t => t.split(':')[0].toLowerCase())
+            ])].slice(0, 6)
             const tagPills = primaryTags.map(tag =>
                 `<button class="tag-nav-btn text-[10px] font-medium text-g-blue/80 bg-blue-50 hover:bg-blue-100 hover:text-g-blue px-2 py-0.5 rounded-full transition-colors flex-shrink-0"
                     data-tag="${escHtml(tag)}">#${escHtml(tag)}</button>`
@@ -597,6 +602,7 @@
                 data-title="${escHtml(item.title || '')}"
                 data-tags="${escHtml(JSON.stringify(tagsArr))}"
                 title="Clip to mine">${CLIP_SVG}</button>`
+            const displaySummary = item.ai_summary || item.summary
             return `
             <div class="link-row group flex flex-col gap-1.5 px-4 py-3 bg-white border border-g-border rounded-[12px] hover:border-g-blue/40 card-glow transition-colors">
                 <div class="flex items-start gap-2">
@@ -606,7 +612,7 @@
                     </a>
                     ${clipBtn}
                 </div>
-                ${item.summary ? `<p class="text-xs text-g-gray leading-relaxed line-clamp-2">${escHtml(item.summary)}</p>` : ''}
+                ${displaySummary ? `<p class="text-xs text-g-gray leading-relaxed line-clamp-2">${escHtml(displaySummary)}</p>` : ''}
                 <div class="flex flex-wrap items-center gap-1.5 mt-0.5">
                     ${freshBadge}
                     ${relTime ? `<span class="text-[10px] text-g-gray/70">${escHtml(relTime)}</span>` : ''}

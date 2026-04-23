@@ -175,6 +175,76 @@ app.use('/api/v1/tokens/*', authMiddleware)
 
 app.route('/api/v1', v1Routes)
 
+// ─── AI Daemon API ────────────────────────────────────────────────────────────
+// Both routes require a named API token with the 'ai:process' scope.
+app.use('/api/ai/*', apiTokenMiddleware)
+
+// GET /api/ai/queue?limit=N — return a batch of unprocessed active items
+app.get('/api/ai/queue', async (c) => {
+  const apiToken = c.var.apiToken
+  if (!apiToken) return c.json({ error: 'Forbidden', hint: 'Named API token with ai:process scope required' }, 403)
+  let scopes: string[] = []
+  try { scopes = JSON.parse(apiToken.scopes) } catch { /* leave empty */ }
+  if (!scopes.includes('ai:process')) return c.json({ error: 'Forbidden', hint: 'Token missing ai:process scope' }, 403)
+
+  const limitParam = parseInt(c.req.query('limit') ?? '20', 10)
+  const limit = Math.min(Math.max(isNaN(limitParam) ? 20 : limitParam, 1), 50)
+  const now = new Date().toISOString()
+
+  const result = await c.env.DB.prepare(
+    `SELECT r.id, r.url, r.title, r.summary, r.tag_list, r.published_at, f.name AS feed_name
+       FROM rss_items r
+       JOIN rss_feeds f ON f.id = r.feed_id
+      WHERE r.ai_processed_at IS NULL
+        AND r.expires_at > ?
+      ORDER BY r.published_at ASC
+      LIMIT ?`
+  ).bind(now, limit).all()
+
+  return c.json({ items: result.results, count: result.results.length })
+})
+
+// PATCH /api/ai/items — write AI tags + summary back for a batch of items
+app.patch('/api/ai/items', async (c) => {
+  const apiToken = c.var.apiToken
+  if (!apiToken) return c.json({ error: 'Forbidden', hint: 'Named API token with ai:process scope required' }, 403)
+  let scopes: string[] = []
+  try { scopes = JSON.parse(apiToken.scopes) } catch { /* leave empty */ }
+  if (!scopes.includes('ai:process')) return c.json({ error: 'Forbidden', hint: 'Token missing ai:process scope' }, 403)
+
+  let body: unknown
+  try { body = await c.req.json() } catch { return c.json({ error: 'Invalid JSON body' }, 400) }
+  if (!Array.isArray(body) || body.length === 0) return c.json({ error: 'Body must be a non-empty array' }, 400)
+  if (body.length > 50) return c.json({ error: 'Batch too large — max 50 items' }, 400)
+
+  type AiItem = { id: number; ai_tags?: string[]; ai_summary?: string }
+  const items: AiItem[] = []
+  for (const entry of body) {
+    if (typeof entry !== 'object' || entry === null) return c.json({ error: 'Each item must be an object' }, 400)
+    const { id, ai_tags, ai_summary } = entry as Record<string, unknown>
+    if (typeof id !== 'number' || !Number.isInteger(id) || id < 1) return c.json({ error: 'Each item must have a positive integer id' }, 400)
+    if (ai_tags !== undefined && !Array.isArray(ai_tags)) return c.json({ error: 'ai_tags must be an array' }, 400)
+    if (ai_summary !== undefined && typeof ai_summary !== 'string') return c.json({ error: 'ai_summary must be a string' }, 400)
+    if (typeof ai_summary === 'string' && ai_summary.length > 2000) return c.json({ error: 'ai_summary too long (max 2000 chars)' }, 400)
+    items.push({ id, ai_tags: ai_tags as string[] | undefined, ai_summary: ai_summary as string | undefined })
+  }
+
+  const now = new Date().toISOString()
+  const stmts = items.map(item =>
+    c.env.DB.prepare(
+      `UPDATE rss_items SET ai_tags = ?, ai_summary = ?, ai_processed_at = ? WHERE id = ?`
+    ).bind(
+      item.ai_tags !== undefined ? JSON.stringify(item.ai_tags) : null,
+      item.ai_summary ?? null,
+      now,
+      item.id
+    )
+  )
+
+  await c.env.DB.batch(stmts)
+  return c.json({ updated: items.length })
+})
+
 // ─── Station API: GET /api/v/:dashboardTag ──────────────────────────────────
 // Optional auth. Authenticated → owner's own bookmarks. Unauthenticated → public only.
 // Bookmarks are grouped by their secondary tags (tags other than dashboardTag).
@@ -402,7 +472,8 @@ app.get('/api/n', async (c) => {
 app.get('/api/n/recent', async (c) => {
   const now = new Date().toISOString()
   const result = await c.env.DB.prepare(
-    `SELECT r.id, r.url, r.title, r.summary, r.tag_list, r.published_at, f.name AS feed_name
+    `SELECT r.id, r.url, r.title, r.summary, r.tag_list, r.published_at, r.ai_tags, r.ai_summary,
+            f.name AS feed_name
        FROM rss_items r
        JOIN rss_feeds f ON f.id = r.feed_id
       WHERE r.expires_at > ?
@@ -425,6 +496,7 @@ app.get('/api/n/:tag', async (c) => {
 
   const result = await c.env.DB.prepare(
     `SELECT r.id, r.url, r.title, r.summary, r.tag_list, r.published_at, r.feed_id,
+            r.ai_tags, r.ai_summary,
             f.name AS feed_name
        FROM rss_items r
        JOIN rss_feeds f ON f.id = r.feed_id
@@ -449,6 +521,9 @@ app.get('/api/n/:tag', async (c) => {
         url: row.url,
         title: row.title,
         summary: row.summary,
+        ai_summary: row.ai_summary,
+        ai_tags: row.ai_tags,
+        tag_list: row.tag_list,
         published_at: row.published_at,
         feed_name: row.feed_name,
       })

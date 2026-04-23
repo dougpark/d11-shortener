@@ -123,12 +123,18 @@ CREATE TABLE IF NOT EXISTS rss_items (
   -- Tags derived from RSS <category> fields + title keyword extraction
   tag_list     TEXT    NOT NULL DEFAULT '[]',
 
-  published_at TEXT,                           -- RSS <pubDate> normalised to ISO 8601 UTC
-  expires_at   TEXT    NOT NULL,               -- created_at + 30 days, enforced at ingest
-  created_at   TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+  published_at    TEXT,                         -- RSS <pubDate> normalised to ISO 8601 UTC
+  expires_at      TEXT    NOT NULL,             -- created_at + 30 days, enforced at ingest
+  created_at      TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+
+  -- AI enrichment (populated by external daemon via /api/ai/*)
+  ai_tags         TEXT    DEFAULT NULL,         -- JSON array, additive alongside tag_list
+  ai_summary      TEXT    DEFAULT NULL,         -- clean AI-generated summary
+  ai_processed_at TEXT    DEFAULT NULL          -- NULL = not yet processed by AI
 );
 
-CREATE INDEX IF NOT EXISTS idx_rss_items_guid       ON rss_items (guid);
-CREATE INDEX IF NOT EXISTS idx_rss_items_expires_at ON rss_items (expires_at);
-CREATE INDEX IF NOT EXISTS idx_rss_items_feed_id    ON rss_items (feed_id);
-CREATE INDEX IF NOT EXISTS idx_rss_items_tag_list   ON rss_items (tag_list);
+CREATE INDEX IF NOT EXISTS idx_rss_items_guid            ON rss_items (guid);
+CREATE INDEX IF NOT EXISTS idx_rss_items_expires_at      ON rss_items (expires_at);
+CREATE INDEX IF NOT EXISTS idx_rss_items_feed_id         ON rss_items (feed_id);
+CREATE INDEX IF NOT EXISTS idx_rss_items_tag_list        ON rss_items (tag_list);
+CREATE INDEX IF NOT EXISTS idx_rss_items_ai_processed_at ON rss_items (ai_processed_at);
