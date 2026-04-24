@@ -25,6 +25,8 @@ import importPinboardHtml from './client/import-pinboard.html'
 import importBrowserHtml from './client/import-browser.html'
 // @ts-expect-error — text module loaded by Wrangler rule
 import newsHtml from './client/news.html'
+// @ts-expect-error — text module loaded by Wrangler rule
+import adminHtml from './client/admin.html'
 
 // ─── Environment bindings (declared in wrangler.toml) ─────────────────────────
 export type Env = {
@@ -635,6 +637,68 @@ app.get('/api/n/:tag', async (c) => {
   return c.json({ tag: rawTag, groups })
 })
 
+// ─── Admin API ────────────────────────────────────────────────────────────────
+// GET /api/admin/stats — site-wide stats for the admin dashboard.
+// Requires a valid session cookie (authMiddleware). No admin-role check in v1.
+app.get('/api/admin/stats', authMiddleware, async (c) => {
+  const now = new Date().toISOString()
+
+  const [bm, users, tokens, feeds, rssItems, bmPublic, bmAi, bm7d, bm30d, topTags] =
+    await c.env.DB.batch([
+      c.env.DB.prepare('SELECT COUNT(*) AS cnt FROM bookmarks'),
+      c.env.DB.prepare('SELECT COUNT(*) AS cnt FROM users'),
+      c.env.DB.prepare('SELECT COUNT(*) AS cnt FROM api_tokens'),
+      c.env.DB.prepare('SELECT COUNT(*) AS total, SUM(is_active) AS active FROM rss_feeds'),
+      c.env.DB.prepare('SELECT COUNT(*) AS cnt FROM rss_items WHERE expires_at > ?').bind(now),
+      c.env.DB.prepare('SELECT COUNT(*) AS cnt FROM bookmarks WHERE is_public = 1'),
+      c.env.DB.prepare('SELECT COUNT(*) AS cnt FROM bookmarks WHERE ai_processed_at IS NOT NULL'),
+      c.env.DB.prepare(`SELECT COUNT(*) AS cnt FROM bookmarks WHERE created_at >= datetime('now','-7 days')`),
+      c.env.DB.prepare(`SELECT COUNT(*) AS cnt FROM bookmarks WHERE created_at >= datetime('now','-30 days')`),
+      c.env.DB.prepare('SELECT tag_list FROM bookmarks WHERE tag_list != \'[]\''),
+    ])
+
+  // Tally tag frequencies from all bookmarks
+  const tagCounts = new Map<string, number>()
+  for (const row of (topTags.results as { tag_list: string }[])) {
+    let tags: string[] = []
+    try { tags = JSON.parse(row.tag_list) } catch { /* skip */ }
+    for (const t of tags) {
+      const name = t.split(':')[0].toLowerCase()
+      tagCounts.set(name, (tagCounts.get(name) ?? 0) + 1)
+    }
+  }
+  const top10Tags = [...tagCounts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(([tag, count]) => ({ tag, count }))
+
+  const bmRow  = bm.results[0]  as { cnt: number }
+  const usrRow = users.results[0] as { cnt: number }
+  const tokRow = tokens.results[0] as { cnt: number }
+  const feedRow = feeds.results[0] as { total: number; active: number }
+  const rssRow  = rssItems.results[0] as { cnt: number }
+  const pubRow  = bmPublic.results[0] as { cnt: number }
+  const aiRow   = bmAi.results[0]    as { cnt: number }
+  const w7Row   = bm7d.results[0]    as { cnt: number }
+  const w30Row  = bm30d.results[0]   as { cnt: number }
+
+  return c.json({
+    bookmarks: {
+      total:     bmRow.cnt,
+      public:    pubRow.cnt,
+      private:   bmRow.cnt - pubRow.cnt,
+      ai_processed: aiRow.cnt,
+      new_7d:    w7Row.cnt,
+      new_30d:   w30Row.cnt,
+    },
+    users:      usrRow.cnt,
+    api_tokens: tokRow.cnt,
+    rss_feeds:  { total: feedRow.total, active: feedRow.active },
+    rss_items:  rssRow.cnt,
+    top_tags:   top10Tags,
+  })
+})
+
 // ─── Front-end HTML (single SPA served for all UI routes) ────────────────────
 app.get('/', (c) => c.html(appHtml as string))
 app.get('/add', (c) => c.html(appHtml as string))
@@ -645,6 +709,7 @@ app.get('/n', (c) => c.html(newsHtml as string))
 app.get('/n/:tag', (c) => c.html(newsHtml as string))
 app.get('/import/pinboard', (c) => c.html(importPinboardHtml as string))
 app.get('/import/browser', (c) => c.html(importBrowserHtml as string))
+app.get('/admin', (c) => c.html(adminHtml as string))
 
 // ─── 404 catch-all ────────────────────────────────────────────────────────────
 app.notFound((c) => c.json({ error: 'Not Found' }, 404))

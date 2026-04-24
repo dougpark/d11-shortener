@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin — Lumin</title>
+    <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="shortcut icon" href="/favicon.ico" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        g: { blue: '#4285F4', black: '#1F1F1F', gray: '#474747', border: '#E3E3E3', surface: '#FFFFFF' }
+                    },
+                    fontFamily: { sans: ['Inter', 'Roboto', 'sans-serif'] },
+                }
+            }
+        }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .spinner {
+            border: 2px solid #E3E3E3;
+            border-top-color: #4285F4;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            animation: spin .7s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+
+<body class="bg-[#F0F2F5] font-sans text-g-black antialiased min-h-screen">
+
+    <!-- ── Nav ── -->
+    <header class="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-g-border">
+        <div class="max-w-5xl mx-auto px-6 h-14 flex items-center gap-3">
+            <a href="/" class="flex-shrink-0">
+                <img src="/lumin_logo.png" alt="Lumin" class="h-8 w-auto">
+            </a>
+            <span class="text-g-border select-none">|</span>
+            <h1 class="text-sm font-semibold text-g-black flex-1">Admin</h1>
+            <a href="/" class="flex items-center gap-1.5 text-xs text-g-gray hover:text-g-blue transition-colors">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+                Dashboard
+            </a>
+        </div>
+    </header>
+
+    <!-- ── Loading ── -->
+    <div id="loading" class="flex items-center justify-center py-40">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- ── Error ── -->
+    <div id="error-state" class="hidden text-center py-40 px-6">
+        <p class="font-semibold text-g-black mb-1">Could not load stats</p>
+        <p class="text-sm text-g-gray" id="error-msg">Please check your login and try again.</p>
+        <a href="/" class="mt-6 inline-block text-sm text-g-blue hover:underline">← Back to Dashboard</a>
+    </div>
+
+    <!-- ── Content ── -->
+    <main id="content" class="hidden max-w-5xl mx-auto px-6 py-8 space-y-8">
+
+        <!-- Section: Bookmarks -->
+        <section>
+            <h2 class="text-xs font-semibold text-g-gray uppercase tracking-widest mb-3">Bookmarks</h2>
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                <div class="bg-white border border-g-border rounded-[16px] p-4 col-span-2 sm:col-span-1 lg:col-span-2">
+                    <p class="text-xs text-g-gray mb-1">Total</p>
+                    <p class="text-3xl font-bold text-g-black" id="bm-total">—</p>
+                </div>
+                <div class="bg-white border border-g-border rounded-[16px] p-4">
+                    <p class="text-xs text-g-gray mb-1">Public</p>
+                    <p class="text-2xl font-bold text-green-600" id="bm-public">—</p>
+                </div>
+                <div class="bg-white border border-g-border rounded-[16px] p-4">
+                    <p class="text-xs text-g-gray mb-1">Private</p>
+                    <p class="text-2xl font-bold text-g-black" id="bm-private">—</p>
+                </div>
+                <div class="bg-white border border-g-border rounded-[16px] p-4">
+                    <p class="text-xs text-g-gray mb-1">AI Processed</p>
+                    <p class="text-2xl font-bold text-purple-600" id="bm-ai">—</p>
+                </div>
+                <div class="bg-white border border-g-border rounded-[16px] p-4">
+                    <p class="text-xs text-g-gray mb-1">New (7d)</p>
+                    <p class="text-2xl font-bold text-g-blue" id="bm-7d">—</p>
+                </div>
+                <div class="bg-white border border-g-border rounded-[16px] p-4">
+                    <p class="text-xs text-g-gray mb-1">New (30d)</p>
+                    <p class="text-2xl font-bold text-g-blue" id="bm-30d">—</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section: Site -->
+        <section>
+            <h2 class="text-xs font-semibold text-g-gray uppercase tracking-widest mb-3">Site</h2>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div class="bg-white border border-g-border rounded-[16px] p-4">
+                    <p class="text-xs text-g-gray mb-1">Users</p>
+                    <p class="text-2xl font-bold text-g-black" id="stat-users">—</p>
+                </div>
+                <div class="bg-white border border-g-border rounded-[16px] p-4">
+                    <p class="text-xs text-g-gray mb-1">API Tokens</p>
+                    <p class="text-2xl font-bold text-g-black" id="stat-tokens">—</p>
+                </div>
+                <div class="bg-white border border-g-border rounded-[16px] p-4">
+                    <p class="text-xs text-g-gray mb-1">RSS Feeds</p>
+                    <p class="text-2xl font-bold text-g-black" id="stat-feeds">—</p>
+                    <p class="text-[11px] text-g-gray mt-0.5" id="stat-feeds-active"></p>
+                </div>
+                <div class="bg-white border border-g-border rounded-[16px] p-4">
+                    <p class="text-xs text-g-gray mb-1">Live RSS Items</p>
+                    <p class="text-2xl font-bold text-g-black" id="stat-rss-items">—</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section: Top Tags -->
+        <section>
+            <h2 class="text-xs font-semibold text-g-gray uppercase tracking-widest mb-3">Top Tags (all users)</h2>
+            <div class="bg-white border border-g-border rounded-[16px] p-5">
+                <div id="top-tags" class="flex flex-wrap gap-2"></div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        function qs(sel) { return document.querySelector(sel) }
+        function escHtml(s) {
+            return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+        }
+        function fmt(n) { return Number(n).toLocaleString() }
+
+        async function boot() {
+            const token = localStorage.getItem('d11_token')
+            if (!token) { location.href = '/'; return }
+
+            let data
+            try {
+                const res = await fetch('/api/admin/stats', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                })
+                if (res.status === 401 || res.status === 403) { location.href = '/'; return }
+                if (!res.ok) throw new Error('HTTP ' + res.status)
+                data = await res.json()
+            } catch (e) {
+                qs('#loading').classList.add('hidden')
+                qs('#error-state').classList.remove('hidden')
+                qs('#error-msg').textContent = String(e)
+                return
+            }
+
+            // Bookmarks
+            qs('#bm-total').textContent   = fmt(data.bookmarks.total)
+            qs('#bm-public').textContent  = fmt(data.bookmarks.public)
+            qs('#bm-private').textContent = fmt(data.bookmarks.private)
+            qs('#bm-ai').textContent      = fmt(data.bookmarks.ai_processed)
+            qs('#bm-7d').textContent      = fmt(data.bookmarks.new_7d)
+            qs('#bm-30d').textContent     = fmt(data.bookmarks.new_30d)
+
+            // Site
+            qs('#stat-users').textContent      = fmt(data.users)
+            qs('#stat-tokens').textContent     = fmt(data.api_tokens)
+            qs('#stat-feeds').textContent      = fmt(data.rss_feeds.total)
+            qs('#stat-feeds-active').textContent = data.rss_feeds.active + ' active'
+            qs('#stat-rss-items').textContent  = fmt(data.rss_items)
+
+            // Top tags
+            const tagHtml = (data.top_tags ?? []).map(({ tag, count }) =>
+                `<span class="flex items-center gap-1.5 bg-[#F3F4F6] text-g-gray text-xs px-3 py-1 rounded-full">
+                    <span class="font-medium text-g-black">#${escHtml(tag)}</span>
+                    <span class="text-[11px]">${fmt(count)}</span>
+                </span>`
+            ).join('')
+            qs('#top-tags').innerHTML = tagHtml || '<span class="text-sm text-g-gray">No tags found.</span>'
+
+            qs('#loading').classList.add('hidden')
+            qs('#content').classList.remove('hidden')
+        }
+
+        boot()
+    </script>
+
+</body>
+</html>
