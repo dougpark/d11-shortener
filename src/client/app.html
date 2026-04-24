@@ -1894,12 +1894,7 @@
           ${pubBadge}${archBadge}
         </div>
         <div class="flex items-center gap-2 flex-wrap">
-          <button onclick="copyLink('${escAttr(fullShortLink)}')"
-            class="text-g-blue text-xs font-mono hover:underline flex items-center gap-1">
-            ${escHtml(shortLink)}
-          </button>
-          <span class="text-g-border text-xs">·</span>
-          <span class="text-g-gray text-xs truncate max-w-xs">${escHtml(shortDomain(b.url))}</span>
+          <a href="${escAttr(b.url)}" target="_blank" rel="noopener noreferrer" class="text-g-gray text-xs hover:text-g-blue hover:underline transition-colors truncate max-w-sm" title="${escAttr(b.url)}">${escHtml(shortUrl(b.url))}</a>
           ${b.hit_count ? `<span class="text-g-gray text-xs">· ${b.hit_count} click${b.hit_count !== 1 ? 's' : ''}</span>` : ''}
         </div>
       </div>
@@ -2084,9 +2079,7 @@
       </div>
       <div class="flex items-center gap-2 mt-0.5 flex-wrap">
         ${pubDot}
-        <button onclick="copyLink('${escAttr(fullShortLink)}')" class="text-xs text-g-blue font-mono hover:underline">${escHtml(shortLink)}</button>
-        <span class="text-g-border text-xs">·</span>
-        <span class="text-g-gray text-xs">${escHtml(shortDomain(b.url))}</span>
+        <a href="${escAttr(b.url)}" target="_blank" rel="noopener noreferrer" class="text-g-gray text-xs hover:text-g-blue hover:underline transition-colors truncate" title="${escAttr(b.url)}">${escHtml(shortUrl(b.url, 45))}</a>
         ${b.hit_count ? `<span class="text-g-gray text-xs">· ${b.hit_count}</span>` : ''}
       </div>
       ${b.short_description ? `
@@ -2330,6 +2323,14 @@
 
         function shortDomain(url) {
             try { return new URL(url).hostname.replace(/^www\./, '') } catch { return url }
+        }
+
+        function shortUrl(url, max = 60) {
+            try {
+                const u = new URL(url)
+                const s = (u.hostname.replace(/^www\./, '') + u.pathname + u.search).replace(/\/$/, '')
+                return s.length > max ? s.slice(0, max) + '…' : s
+            } catch { return url.slice(0, max) }
         }
 
         function escHtml(s) {

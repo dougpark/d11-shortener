@@ -338,6 +338,7 @@ function parseBookmark(b: Awaited<ReturnType<typeof getBookmark>>) {
         is_public: b.is_public === 1,
         is_archived: b.is_archived === 1,
         tag_list: (() => { try { return JSON.parse(b.tag_list) } catch { return [] } })(),
+        ai_tags: (() => { try { return b.ai_tags ? JSON.parse(b.ai_tags) : null } catch { return null } })(),
     }
 }
 
