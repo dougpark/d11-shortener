@@ -85,8 +85,14 @@
 
         <!-- Section: Bookmarks -->
         <section>
-            <h2 class="text-xs font-semibold text-g-gray uppercase tracking-widest mb-3">Bookmarks</h2>
-            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            <button onclick="toggleSection('bookmarks')" class="w-full flex items-center justify-between mb-3 group">
+                <h2 class="text-xs font-semibold text-g-gray uppercase tracking-widest">Bookmarks</h2>
+                <svg id="chevron-bookmarks" class="w-4 h-4 text-g-gray transition-transform duration-200" fill="none"
+                    stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+            </button>
+            <div id="body-bookmarks" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                 <div class="bg-white border border-g-border rounded-[16px] p-4 col-span-2 sm:col-span-1 lg:col-span-2">
                     <p class="text-xs text-g-gray mb-1">Total</p>
                     <p class="text-3xl font-bold text-g-black" id="bm-total">—</p>
@@ -116,8 +122,14 @@
 
         <!-- Section: Site -->
         <section>
-            <h2 class="text-xs font-semibold text-g-gray uppercase tracking-widest mb-3">Site</h2>
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <button onclick="toggleSection('site')" class="w-full flex items-center justify-between mb-3 group">
+                <h2 class="text-xs font-semibold text-g-gray uppercase tracking-widest">Site</h2>
+                <svg id="chevron-site" class="w-4 h-4 text-g-gray transition-transform duration-200" fill="none"
+                    stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+            </button>
+            <div id="body-site" class="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div class="bg-white border border-g-border rounded-[16px] p-4">
                     <p class="text-xs text-g-gray mb-1">Users</p>
                     <p class="text-2xl font-bold text-g-black" id="stat-users">—</p>
@@ -140,41 +152,33 @@
 
         <!-- Section: Top Tags -->
         <section>
-            <h2 class="text-xs font-semibold text-g-gray uppercase tracking-widest mb-3">Top Tags (all users)</h2>
-            <div class="bg-white border border-g-border rounded-[16px] p-5">
+            <button onclick="toggleSection('tags')" class="w-full flex items-center justify-between mb-3 group">
+                <h2 class="text-xs font-semibold text-g-gray uppercase tracking-widest">Top Tags (all users)</h2>
+                <svg id="chevron-tags" class="w-4 h-4 text-g-gray transition-transform duration-200" fill="none"
+                    stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+            </button>
+            <div id="body-tags" class="bg-white border border-g-border rounded-[16px] p-5">
                 <div id="top-tags" class="flex flex-wrap gap-2"></div>
             </div>
         </section>
 
-        <!-- Section: Users -->
+        <!-- Section: Users (lazy-loaded) -->
         <section>
-            <h2 class="text-xs font-semibold text-g-gray uppercase tracking-widest mb-3">Users</h2>
-            <div class="bg-white border border-g-border rounded-[16px] overflow-hidden">
+            <button onclick="toggleSection('users')" class="w-full flex items-center justify-between mb-3 group">
+                <h2 class="text-xs font-semibold text-g-gray uppercase tracking-widest">Users</h2>
+                <svg id="chevron-users" class="w-4 h-4 text-g-gray transition-transform duration-200 -rotate-90"
+                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+            </button>
+            <div id="body-users" class="hidden bg-white border border-g-border rounded-[16px] overflow-hidden">
                 <div id="users-loading" class="flex items-center justify-center py-10">
                     <div class="spinner"></div>
                 </div>
                 <div id="users-error" class="hidden text-center py-10 text-sm text-g-gray">Could not load users.</div>
-                <table id="users-table" class="hidden w-full text-sm">
-                    <thead>
-                        <tr class="border-b border-g-border bg-[#F9FAFB]">
-                            <th class="text-left px-5 py-3 text-xs font-semibold text-g-gray uppercase tracking-wider">
-                                Handle</th>
-                            <th
-                                class="text-left px-5 py-3 text-xs font-semibold text-g-gray uppercase tracking-wider hidden sm:table-cell">
-                                Name</th>
-                            <th
-                                class="text-left px-5 py-3 text-xs font-semibold text-g-gray uppercase tracking-wider hidden md:table-cell">
-                                Email</th>
-                            <th
-                                class="text-left px-5 py-3 text-xs font-semibold text-g-gray uppercase tracking-wider hidden lg:table-cell">
-                                Joined</th>
-                            <th
-                                class="text-center px-5 py-3 text-xs font-semibold text-g-gray uppercase tracking-wider">
-                                Admin</th>
-                        </tr>
-                    </thead>
-                    <tbody id="users-tbody"></tbody>
-                </table>
+                <div id="users-list" class="hidden divide-y divide-g-border"></div>
             </div>
         </section>
 
@@ -248,11 +252,30 @@
 
             qs('#loading').classList.add('hidden')
             qs('#content').classList.remove('hidden')
+        }
 
-            loadUsers(token)
+        // ── Section toggle ────────────────────────────────────────────────────
+        const sectionLoaded = {}
+
+        function toggleSection(name) {
+            const body = qs(`#body-${name}`)
+            const chevron = qs(`#chevron-${name}`)
+            const isHidden = body.classList.contains('hidden')
+            body.classList.toggle('hidden', !isHidden)
+            chevron.classList.toggle('-rotate-90', !isHidden)
+
+            // Lazy-load on first open
+            if (isHidden && !sectionLoaded[name]) {
+                sectionLoaded[name] = true
+                const token = localStorage.getItem('d11_token')
+                if (name === 'users') loadUsers(token)
+            }
         }
 
         async function loadUsers(token) {
+            qs('#users-loading').classList.remove('hidden')
+            qs('#users-error').classList.add('hidden')
+            qs('#users-list').classList.add('hidden')
             try {
                 const res = await fetch('/api/admin/users', {
                     headers: { 'Authorization': 'Bearer ' + token }
@@ -267,33 +290,55 @@
         }
 
         function renderUsers(users, token) {
-            const tbody = qs('#users-tbody')
-            tbody.innerHTML = users.map(u => {
+            const list = qs('#users-list')
+            list.innerHTML = users.map(u => {
                 const isSelf = u.id === currentUserId
                 const joined = u.created_at ? new Date(u.created_at).toLocaleDateString() : '—'
+                const lastAdded = u.last_bookmark_at ? new Date(u.last_bookmark_at).toLocaleDateString() : 'never'
+                const total = u.bookmark_total ?? 0
+                const pub = u.bookmark_public ?? 0
+                const priv = u.bookmark_private ?? 0
+                const ai = u.bookmark_ai ?? 0
+                const aiPct = total > 0 ? Math.round(ai / total * 100) : 0
                 const adminBadge = u.is_admin
                     ? `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Admin</span>`
                     : `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[#F3F4F6] text-g-gray">User</span>`
                 const btn = isSelf
                     ? `<span class="text-xs text-g-gray italic">you</span>`
                     : u.is_admin
-                        ? `<button onclick="toggleAdmin(${u.id}, false, '${escHtml(u.slug_prefix)}')" class="text-xs text-red-500 hover:text-red-700 hover:underline transition-colors">Remove</button>`
-                        : `<button onclick="toggleAdmin(${u.id}, true, '${escHtml(u.slug_prefix)}')" class="text-xs text-g-blue hover:text-blue-700 hover:underline transition-colors">Make Admin</button>`
-                return `<tr class="border-b border-g-border last:border-0 hover:bg-[#FAFAFA] transition-colors" id="user-row-${u.id}">
-                    <td class="px-5 py-3 font-medium text-g-black">@${escHtml(u.slug_prefix)}</td>
-                    <td class="px-5 py-3 text-g-gray hidden sm:table-cell">${escHtml(u.full_name ?? '—')}</td>
-                    <td class="px-5 py-3 text-g-gray hidden md:table-cell">${escHtml(u.email ?? '—')}</td>
-                    <td class="px-5 py-3 text-g-gray hidden lg:table-cell">${joined}</td>
-                    <td class="px-5 py-3 text-center">
-                        <div class="flex items-center justify-center gap-2">
+                        ? `<button onclick="toggleAdmin(${u.id}, false, '${escHtml(u.slug_prefix)}')" class="text-xs text-red-500 hover:text-red-700 hover:underline transition-colors">Remove admin</button>`
+                        : `<button onclick="toggleAdmin(${u.id}, true, '${escHtml(u.slug_prefix)}')" class="text-xs text-g-blue hover:text-blue-700 hover:underline transition-colors">Make admin</button>`
+                const statPill = (label, value, color) =>
+                    `<span class="inline-flex items-center gap-1 text-[11px] text-g-gray">
+                        <span class="font-medium ${color}">${value}</span>
+                        <span>${label}</span>
+                    </span>`
+                return `<div class="px-5 py-4 hover:bg-[#FAFAFA] transition-colors" id="user-row-${u.id}">
+                    <!-- Row 1: identity + admin control -->
+                    <div class="flex items-center justify-between gap-3 mb-1.5">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <span class="font-semibold text-g-black">@${escHtml(u.slug_prefix)}</span>
+                            ${u.full_name ? `<span class="text-sm text-g-gray truncate">${escHtml(u.full_name)}</span>` : ''}
+                            ${u.email ? `<span class="text-xs text-g-gray truncate hidden sm:inline">${escHtml(u.email)}</span>` : ''}
+                        </div>
+                        <div class="flex items-center gap-2 flex-shrink-0">
                             ${adminBadge}
                             ${btn}
                         </div>
-                    </td>
-                </tr>`
+                    </div>
+                    <!-- Row 2: stats -->
+                    <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+                        ${statPill('bookmarks', fmt(total), 'text-g-black')}
+                        ${statPill('public', fmt(pub), 'text-green-600')}
+                        ${statPill('private', fmt(priv), 'text-g-gray')}
+                        ${statPill('AI', aiPct + '%', 'text-purple-600')}
+                        ${statPill('last added', lastAdded, 'text-g-black')}
+                        ${statPill('joined', joined, 'text-g-black')}
+                    </div>
+                </div>`
             }).join('')
             qs('#users-loading').classList.add('hidden')
-            qs('#users-table').classList.remove('hidden')
+            qs('#users-list').classList.remove('hidden')
         }
 
         async function toggleAdmin(userId, makeAdmin, handle) {

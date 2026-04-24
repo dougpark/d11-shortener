@@ -710,15 +710,22 @@ app.get('/api/admin/stats', authMiddleware, async (c) => {
   })
 })
 
-// GET /api/admin/users — list all users (admin only)
+// GET /api/admin/users — list all users with per-user bookmark stats (admin only)
 app.get('/api/admin/users', authMiddleware, async (c) => {
   const deny = requireAdmin(c)
   if (deny) return deny
 
   const result = await c.env.DB.prepare(
-    `SELECT id, slug_prefix, full_name, email, created_at, is_admin
-       FROM users
-       ORDER BY id ASC`
+    `SELECT u.id, u.slug_prefix, u.full_name, u.email, u.created_at, u.is_admin,
+            COUNT(b.id)                                                  AS bookmark_total,
+            SUM(CASE WHEN b.is_public = 1  THEN 1 ELSE 0 END)           AS bookmark_public,
+            SUM(CASE WHEN b.is_public = 0  THEN 1 ELSE 0 END)           AS bookmark_private,
+            SUM(CASE WHEN b.ai_processed_at IS NOT NULL THEN 1 ELSE 0 END) AS bookmark_ai,
+            MAX(b.created_at)                                            AS last_bookmark_at
+       FROM users u
+       LEFT JOIN bookmarks b ON b.user_id = u.id AND b.is_archived = 0
+       GROUP BY u.id
+       ORDER BY bookmark_total DESC`
   ).all()
 
   return c.json({ users: result.results })
