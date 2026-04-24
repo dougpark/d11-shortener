@@ -453,7 +453,7 @@
             btn.innerHTML = SPIN_SVG
             const { url, title, tags } = btn.dataset
             const slug = makeSlug(url)
-            const body = { url, title: title || undefined, tag_list: JSON.parse(tags || '[]'), is_public: false, slug }
+            const body = { url, title: title || undefined, tag_list: JSON.parse(tags || '[]'), is_public: true, slug }
             const post = (s) => fetch('/api/bookmarks', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify({ ...body, slug: s }) })
             let res = await post(slug)
             if (res.status === 409) {
