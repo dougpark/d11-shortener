@@ -12,22 +12,35 @@ import {
     listTags,
 } from '../db/bookmarks.ts'
 import { fetchUrlPreview } from '../utils/preview.ts'
+import { parseSearchQuery } from '../utils/search.ts'
 import type { Bookmark, UpdateBookmarkInput } from '../db/types.ts'
 
 const bookmarks = new Hono<{ Bindings: Env; Variables: Variables }>()
 
 // ─── GET /api/bookmarks ───────────────────────────────────────────────────────
-// Query params: sort, order, tag, search, archived, page, per_page
+// Query params: sort, order, tag, search, since, before, archived, unread, page, per_page
+// The "search" param also accepts natural-language date phrases:
+//   "since april 9, 2023"  |  "before may 1, 2023"  |  "between X and Y"
 bookmarks.get('/', async (c) => {
     const user = c.get('user')
     const q = c.req.query()
+
+    // Parse optional natural-language date phrases out of the search string
+    const rawSearch = q.search ?? ''
+    const { cleanQuery, since: parsedSince, before: parsedBefore } = parseSearchQuery(rawSearch)
+
+    // Explicit since/before params override anything parsed from the search string
+    const since = q.since || parsedSince
+    const before = q.before || parsedBefore
 
     const { bookmarks: rows, total } = await listBookmarks(c.env.DB, {
         user_id: user.id,
         sort: (q.sort as 'created_at' | 'title' | 'hit_count' | 'last_accessed') ?? 'created_at',
         order: q.order === 'ASC' ? 'ASC' : 'DESC',
         tag: q.tag,
-        search: q.search,
+        search: cleanQuery || undefined,
+        since,
+        before,
         include_archived: q.archived === '1',
         unread: q.unread === '1',
         page: q.page ? parseInt(q.page, 10) : 1,

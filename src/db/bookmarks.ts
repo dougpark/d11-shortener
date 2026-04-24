@@ -1,6 +1,7 @@
 // src/db/bookmarks.ts — D1 helper functions for the bookmarks table
 
 import type { Bookmark, CreateBookmarkInput, UpdateBookmarkInput, ListBookmarksOptions } from './types.ts'
+import { toFtsQuery } from '../utils/search.ts'
 
 // ─── Read ─────────────────────────────────────────────────────────────────────
 
@@ -15,6 +16,8 @@ export async function listBookmarks(
         order = 'DESC',
         tag,
         search,
+        since,
+        before,
         include_archived = false,
         unread = false,
         page = 1,
@@ -27,44 +30,67 @@ export async function listBookmarks(
         : 'created_at'
     const safeOrder = order === 'ASC' ? 'ASC' : 'DESC'
 
-    const conditions: string[] = ['user_id = ?']
+    const conditions: string[] = ['b.user_id = ?']
     const bindings: (string | number)[] = [user_id]
 
     if (!include_archived) {
-        conditions.push('is_archived = 0')
+        conditions.push('b.is_archived = 0')
     }
 
     if (tag) {
-        // JSON array contains the tag value (simple LIKE match)
-        conditions.push(`tag_list LIKE ?`)
+        conditions.push(`b.tag_list LIKE ?`)
         bindings.push(`%"${tag}"%`)
     }
 
-    if (search) {
-        conditions.push(`(title LIKE ? OR url LIKE ? OR short_description LIKE ?)`)
-        const like = `%${search}%`
-        bindings.push(like, like, like)
+    if (since) {
+        conditions.push(`b.created_at >= ?`)
+        bindings.push(since)
+    }
+
+    if (before) {
+        conditions.push(`b.created_at <= ?`)
+        bindings.push(before)
     }
 
     if (unread) {
-        conditions.push('hit_count = 0')
+        conditions.push('b.hit_count = 0')
+    }
+
+    const useFts = Boolean(search)
+    let from: string
+    let ftsBindings: string[] = []
+
+    if (useFts) {
+        // FTS5 MATCH with prefix wildcard — "Wed"* matches "Wednesday" etc.
+        from = `FROM bookmarks b JOIN bookmarks_fts fts ON fts.rowid = b.id`
+        conditions.push(`bookmarks_fts MATCH ?`)
+        ftsBindings = [toFtsQuery(search!) ?? search!]
+    } else {
+        from = `FROM bookmarks b`
     }
 
     const where = conditions.join(' AND ')
     const offset = (page - 1) * per_page
 
+    // FTS bindings go after all other WHERE bindings (the MATCH ? is last condition)
+    const allBindings: (string | number)[] = [...bindings, ...ftsBindings]
+
+    const orderClause = useFts
+        ? `ORDER BY rank, b.${safeSort} ${safeOrder}`
+        : `ORDER BY b.${safeSort} ${safeOrder}`
+
     const [rowsResult, countResult] = await Promise.all([
         db
             .prepare(
-                `SELECT * FROM bookmarks WHERE ${where}
-         ORDER BY ${safeSort} ${safeOrder}
+                `SELECT b.* ${from} WHERE ${where}
+         ${orderClause}
          LIMIT ? OFFSET ?`,
             )
-            .bind(...bindings, per_page, offset)
+            .bind(...allBindings, per_page, offset)
             .all<Bookmark>(),
         db
-            .prepare(`SELECT COUNT(*) AS cnt FROM bookmarks WHERE ${where}`)
-            .bind(...bindings)
+            .prepare(`SELECT COUNT(*) AS cnt ${from} WHERE ${where}`)
+            .bind(...allBindings)
             .first<{ cnt: number }>(),
     ])
 

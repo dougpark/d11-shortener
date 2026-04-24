@@ -787,9 +787,13 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
-                    <input id="search-input" type="text" placeholder="Search bookmarks…"
-                        class="w-full pl-10 pr-4 py-2 text-sm border border-g-border rounded-full focus:outline-none focus:border-g-blue transition-colors bg-[#FAFAFA]"
+                    <input id="search-input" type="text" placeholder='Search… or “since april 2023”'
+                        class="w-full pl-10 pr-8 py-2 text-sm border border-g-border rounded-full focus:outline-none focus:border-g-blue transition-colors bg-[#FAFAFA]"
                         oninput="debounceSearch(this.value)">
+                    <button id="search-clear" onclick="clearSearch()" title="Clear search"
+                        class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-g-gray hover:text-g-black transition-colors text-base leading-none">
+                        &times;
+                    </button>
                 </div>
                 <!-- Nav links (desktop) -->
                 <div class="hidden lg:flex items-center gap-4 flex-shrink-0">
@@ -1055,7 +1059,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0" />
                 </svg>
-                <input id="mobile-search-input" type="text" placeholder="Search bookmarks…"
+                <input id="mobile-search-input" type="text" placeholder='Search… or “since april 2023”'
                     class="w-full pl-9 pr-4 py-2 text-sm border border-g-border rounded-full focus:outline-none focus:border-g-blue bg-[#FAFAFA] transition-colors"
                     oninput="debounceSearch(this.value)">
             </div>
@@ -1853,6 +1857,19 @@
             S.searchQuery = val
             clearTimeout(S.searchTimer)
             S.searchTimer = setTimeout(() => loadBookmarks(), 320)
+            const clearBtn = qs('#search-clear')
+            if (clearBtn) clearBtn.classList.toggle('hidden', !val)
+        }
+
+        function clearSearch() {
+            S.searchQuery = ''
+            const inp = qs('#search-input')
+            if (inp) inp.value = ''
+            const mInp = qs('#mobile-search-input')
+            if (mInp) mInp.value = ''
+            const clearBtn = qs('#search-clear')
+            if (clearBtn) clearBtn.classList.add('hidden')
+            loadBookmarks()
         }
 
         function renderBookmarkRow(b) {

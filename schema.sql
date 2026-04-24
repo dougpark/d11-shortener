@@ -147,3 +147,37 @@ CREATE INDEX IF NOT EXISTS idx_rss_items_expires_at      ON rss_items (expires_a
 CREATE INDEX IF NOT EXISTS idx_rss_items_feed_id         ON rss_items (feed_id);
 CREATE INDEX IF NOT EXISTS idx_rss_items_tag_list        ON rss_items (tag_list);
 CREATE INDEX IF NOT EXISTS idx_rss_items_ai_processed_at ON rss_items (ai_processed_at);
+
+-- ─── Full-Text Search (FTS5) ──────────────────────────────────────────────────
+-- Content table mirrors bookmarks; rowid = bookmarks.id.
+-- Searches across title, short_description, ai_summary, tag_list, and url.
+CREATE VIRTUAL TABLE IF NOT EXISTS bookmarks_fts USING fts5(
+  title,
+  short_description,
+  ai_summary,
+  tag_list,
+  url,
+  content=bookmarks,
+  content_rowid=id
+);
+
+-- Keep the FTS index in sync with the bookmarks table
+CREATE TRIGGER IF NOT EXISTS bookmarks_fts_ai
+  AFTER INSERT ON bookmarks BEGIN
+    INSERT INTO bookmarks_fts(rowid, title, short_description, ai_summary, tag_list, url)
+    VALUES (new.id, new.title, new.short_description, new.ai_summary, new.tag_list, new.url);
+  END;
+
+CREATE TRIGGER IF NOT EXISTS bookmarks_fts_ad
+  AFTER DELETE ON bookmarks BEGIN
+    INSERT INTO bookmarks_fts(bookmarks_fts, rowid, title, short_description, ai_summary, tag_list, url)
+    VALUES ('delete', old.id, old.title, old.short_description, old.ai_summary, old.tag_list, old.url);
+  END;
+
+CREATE TRIGGER IF NOT EXISTS bookmarks_fts_au
+  AFTER UPDATE ON bookmarks BEGIN
+    INSERT INTO bookmarks_fts(bookmarks_fts, rowid, title, short_description, ai_summary, tag_list, url)
+    VALUES ('delete', old.id, old.title, old.short_description, old.ai_summary, old.tag_list, old.url);
+    INSERT INTO bookmarks_fts(rowid, title, short_description, ai_summary, tag_list, url)
+    VALUES (new.id, new.title, new.short_description, new.ai_summary, new.tag_list, new.url);
+  END;

@@ -84,7 +84,9 @@ export type ListBookmarksOptions = {
     sort?: 'created_at' | 'title' | 'hit_count' | 'last_accessed'
     order?: 'ASC' | 'DESC'
     tag?: string          // filter by a single tag (LIKE search inside JSON)
-    search?: string       // full-text LIKE search across title, url, description
+    search?: string       // FTS5 full-text search across title, description, tags, url
+    since?: string        // ISO 8601 lower bound on created_at (inclusive)
+    before?: string       // ISO 8601 upper bound on created_at (inclusive, end-of-day)
     include_archived?: boolean
     unread?: boolean      // only bookmarks never clicked (hit_count = 0)
     page?: number         // 1-based
