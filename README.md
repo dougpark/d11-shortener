@@ -18,6 +18,52 @@ See the partner Gopher project for an AI powered backend that can consume Lumin'
 
 ---
 
+## Table of Contents
+
+- [Prerequisites](#prerequisites)
+- [First-time setup](#first-time-setup)
+  - [1 — Install dependencies](#1--install-dependencies)
+  - [2 — Create the D1 database](#2--create-the-d1-database)
+  - [3 — Apply the schema](#3--apply-the-schema-remote)
+  - [4 — Set the TOKEN\_SECRET](#4--set-the-token_secret)
+  - [5 — Enable the custom domain route](#5--enable-the-custom-domain-route)
+  - [6 — Deploy](#6--deploy)
+- [Local development](#local-development)
+- [package.json scripts](#packagejson-scripts)
+- [Account registration](#account-registration)
+  - [Step 1 — Choose a handle](#step-1--choose-a-handle)
+  - [Step 2 — Copy your token immediately](#step-2--copy-your-token-immediately)
+  - [Step 3 — Sign In and save to browser](#step-3--paste-it-into-the-sign-in-form-to-trigger-browser-password-saving)
+  - [Step 4 — The magic login link](#step-4--the-magic-login-link)
+  - [Why there is no "real" user ID or password](#why-there-is-no-real-user-id-or-password)
+- [How short links work](#how-short-links-work)
+- [Bookmarklet](#bookmarklet)
+- [User interface](#user-interface)
+  - [Main dashboard](#main-dashboard)
+  - [User menu](#user-menu-avatar--initials-button-top-right)
+- [Architecture](#architecture)
+- [Public API v1](#public-api-v1)
+  - [Authentication](#authentication)
+  - [Scopes](#scopes)
+  - [Endpoints](#endpoints)
+    - [GET /api/v1/posts/updated](#get-apiv1postsupdated)
+    - [GET /api/v1/posts](#get-apiv1posts)
+    - [GET /api/v1/tags](#get-apiv1tags)
+    - [GET /api/v1/tokens](#get-apiv1tokens)
+    - [POST /api/v1/tokens](#post-apiv1tokens)
+    - [DELETE /api/v1/tokens/:id](#delete-apiv1tokensid)
+  - [Bun.js client example](#bunjs-client-example)
+- [AI Enrichment API](#ai-enrichment-api)
+  - [Setup — create a daemon token](#setup--create-a-daemon-token)
+  - [Endpoints](#endpoints-1)
+    - [GET /api/ai/queue](#get-apiaiqueue)
+    - [PATCH /api/ai/items](#patch-apiaiitems)
+  - [Daemon workflow](#daemon-workflow)
+  - [Bun.js daemon example](#bunjs-daemon-example)
+- [Security notes](#security-notes)
+
+---
+
 ## Prerequisites
 
 | Tool | Version |
