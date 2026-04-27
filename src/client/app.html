@@ -1542,10 +1542,11 @@
             const preUrl = params.get('url')
             const preTitle = params.get('title')
             const preDesc = params.get('desc')
+            const preText = params.get('text')
 
             if (!S.token) {
                 goTo(preUrl ? 'login' : 'landing')
-                if (preUrl) { S._preUrl = preUrl; S._preTitle = preTitle; S._preDesc = preDesc }
+                if (preUrl) { S._preUrl = preUrl; S._preTitle = preTitle; S._preDesc = preDesc; S._preText = preText }
                 return
             }
 
@@ -1559,7 +1560,7 @@
 
             if (preUrl) {
                 S.bookmarkletMode = true
-                openAddModal(preUrl, preTitle, preDesc)
+                openAddModal(preUrl, preTitle, preDesc, preText)
             }
         }
 
@@ -2479,7 +2480,7 @@
         // ── Bookmarklet ───────────────────────────────────────────────────────────────
         function buildBookmarkletHref() {
             const base = location.origin
-            return `javascript:(function(){var sel=window.getSelection?window.getSelection().toString():'';window.open('${base}/add?url='+encodeURIComponent(location.href)+'&title='+encodeURIComponent(document.title)+(sel?'&desc='+encodeURIComponent(sel):''),'_blank','width=540,height=700,resizable=yes')})();`
+            return `javascript:(function(){var sel=window.getSelection?window.getSelection().toString().slice(0,2000):'';window.open('${base}/add?url='+encodeURIComponent(location.href)+'&title='+encodeURIComponent(document.title)+(sel?'&text='+encodeURIComponent(sel):''),'_blank','width=540,height=700,resizable=yes')})();`
         }
 
         function initBookmarklet() {
@@ -2491,12 +2492,13 @@
             navigator.clipboard.writeText(buildBookmarkletHref())
             toast('Bookmarklet snippet copied!')
         }
-        function openAddModal(preUrl, preTitle, preDesc) {
+        function openAddModal(preUrl, preTitle, preDesc, preText) {
             M.mode = 'add'
             M.isPublic = true
             M.tags = []
             M.aiSummary = null
             M.aiTags = []
+            M.selectedText = preText || ''
             renderAiSummary()
             M.slugOk = false
             M.editId = null
@@ -2547,6 +2549,7 @@
             populateTagDatalist()
             M.aiSummary = b.ai_summary || null
             M.aiTags = Array.isArray(b.ai_tags) ? [...b.ai_tags] : []
+            M.selectedText = ''
             renderAiSummary()
             renderTagChips()
             showEl('bookmark-modal')
@@ -2702,6 +2705,7 @@
             _editOrigSlug: null,
             aiSummary: null,
             aiTags: [],
+            selectedText: '',
         }
 
         // ── Slug availability check ───────────────────────────────────────────────
@@ -2921,6 +2925,7 @@
                         url,
                         title: qs('#m-title').value.trim(),
                         short_description: qs('#m-desc').value.trim(),
+                        selected_text: M.selectedText.slice(0, 300),
                     })
                 })
                 if (!res.ok) throw new Error('enrich failed')

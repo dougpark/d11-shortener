@@ -189,7 +189,7 @@ app.post('/api/ai/enrich', authMiddleware, async (c) => {
   if (!url && !title) return c.json({ ai_summary: null, ai_tags: [] })
 
   const model = c.env.AI_BOOKMARK_MODEL || '@cf/meta/llama-3.2-1b-instruct'
-  const snippet = (selected_text || short_description).slice(0, 600)
+  const snippet = (selected_text || short_description).slice(0, 300)
 
   const messages = [{
     role: 'user' as const,
@@ -199,7 +199,7 @@ app.post('/api/ai/enrich', authMiddleware, async (c) => {
   try {
     type AiResult = { response?: string }
     const result = await Promise.race([
-      c.env.AI.run(model, { messages }) as Promise<AiResult>,
+      c.env.AI.run(model, { messages, max_tokens: 512 }) as Promise<AiResult>,
       new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 4000)),
     ])
     const raw = (result as AiResult).response ?? ''
