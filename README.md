@@ -41,6 +41,15 @@ See the partner Gopher project for an AI powered backend that can consume Lumin'
 - [User interface](#user-interface)
   - [Main dashboard](#main-dashboard)
   - [User menu](#user-menu-avatar--initials-button-top-right)
+- [Bookmark Analytics](#bookmark-analytics)
+  - [Summary stats](#summary-stats)
+  - [Data Completeness](#data-completeness)
+  - [Status Breakdown and Description Length](#status-breakdown-and-description-length)
+  - [AI Summary Length](#ai-summary-length)
+  - [Tags per Bookmark](#tags-per-bookmark)
+  - [Click Count Distribution](#click-count-distribution)
+  - [Save Velocity](#save-velocity)
+  - [Top Domains](#top-domains)
 - [Architecture](#architecture)
 - [Public API v1](#public-api-v1)
   - [Authentication](#authentication)
@@ -290,6 +299,70 @@ The dropdown shows your display name and slug prefix, then the following actions
 | **Import from Browser** | Opens a dedicated import page (`/import/browser`) for Netscape HTML bookmark exports — the standard format produced by Chrome, Firefox, Edge, and Safari (`Bookmarks Manager → Export`). Folder names become tags. Safari Reading List items get a `reading-list` tag. A tag chip preview lets you verify the folder→tag mapping before committing. |
 | **Copy Login Link** | Copies your magic login URL to the clipboard. This link contains your session token and can be used to log in from any browser without a password. Treat it like a password — anyone with the link has full access to your account. |
 | **Sign Out** | Clears the `d11_auth` session cookie and returns to the logged-out state. Your data and token are unaffected; you can log back in via your login link. |
+
+---
+
+## Bookmark Analytics
+
+Open the **Analytics** modal from the user menu (avatar button → **Analytics**). All data is computed server-side in a single D1 batch query and rendered client-side on Canvas — no external charting library required.
+
+### Summary stats
+
+Four at-a-glance tiles across the top of the modal: total bookmarks, AI enrichment percentage, average tags per bookmark, and the date of your oldest saved link.
+
+### Data Completeness
+
+![Data Completeness and Summary Stats](docs/images/analytics_data_completeness.png)
+
+Five progress bars show what fraction of your bookmarks have each quality field populated:
+
+| Field | What it measures |
+|---|---|
+| **Has title** | `title` is non-empty |
+| **Has description** | `short_description` is non-empty |
+| **Has tags** | `tag_list` contains at least one tag |
+| **AI processed** | `ai_processed_at` is set (AI summary + tags have been generated) |
+| **Has been clicked** | `hit_count > 0` (you have revisited the link at least once) |
+
+Bars are colour-coded: green ≥ 80%, amber ≥ 40%, red < 40%.
+
+### Status Breakdown and Description Length
+
+![Status Breakdown and Description Length Distribution](docs/images/analytics_status_breakdown.png)
+
+Three pill badges show the split between **Active Private**, **Active Public**, and **Archived** bookmarks.
+
+Below that, a bar chart buckets every bookmark by the character length of its `short_description` note: `empty`, `1–25`, `26–50`, `51–100`, `101–200`, `201–500`, `500+`. A heavy `empty` bucket is the signal to add more notes; the sweet spot for quick-scan notes is the `51–100` range.
+
+### AI Summary Length
+
+![AI Summary Length Distribution](docs/images/analytics_ai_summary.png)
+
+The same length-bucket histogram applied to `ai_summary`. Well-formed AI summaries cluster in the `101–200` and `201–500` character ranges. A spike in `empty` means those bookmarks haven't been processed by the AI daemon yet. Very short summaries (< 50 chars) indicate truncated or low-quality AI output.
+
+### Tags per Bookmark
+
+![Tags per Bookmark](docs/images/analytics_tag_count.png)
+
+For active (non-archived) bookmarks, shows how many carry 0, 1, 2, 3, 4, or 5+ tags. A large `0` bar means the taxonomy isn't being applied — a prompt to run the AI daemon or tag manually.
+
+### Click Count Distribution
+
+![Click Count Distribution](docs/images/analytics_click_counts.png)
+
+Buckets bookmarks by `hit_count`: `0`, `1–5`, `6–20`, `21–100`, `100+`. A collection dominated by the `0` bucket means you're saving links you never revisit — useful for deciding what to archive or prune.
+
+### Save Velocity
+
+![Save Velocity](docs/images/analytics_save_velocity.png)
+
+A line chart of bookmarks added per calendar month, going back to your oldest bookmark. Useful for spotting periods of high curation activity versus gaps, and for understanding how the collection has grown over time.
+
+### Top Domains
+
+![Top Domains](docs/images/analytics_top_domains.png)
+
+A horizontal bar chart of the 15 most-bookmarked domains (extracted from `url` using SQLite string ops — no external parser). Reveals concentration: if a handful of domains account for the majority of saves, the collection may be narrower in scope than it appears.
 
 ---
 
