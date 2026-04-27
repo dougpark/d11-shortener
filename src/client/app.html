@@ -1425,10 +1425,10 @@
                     <label class="block text-xs font-semibold text-g-gray mb-1.5 uppercase tracking-wide">Tags</label>
                     <div class="flex flex-wrap gap-1.5 mb-2" id="tag-chips"></div>
                     <div class="flex gap-2">
-                        <input id="m-tag-input" type="text" placeholder="Add a tag and press Enter or comma"
+                        <input id="m-tag-input" type="text" placeholder="Add a tag and press Enter, comma, or space"
                             list="tag-datalist"
                             class="flex-1 border border-g-border rounded-[12px] px-4 py-2.5 text-sm focus:outline-none focus:border-g-blue transition-colors"
-                            onkeydown="handleTagKey(event)">
+                            onkeydown="handleTagKey(event)" oninput="handleTagInput(event)">
                         <datalist id="tag-datalist"></datalist>
                         <button onclick="addTagFromInput()"
                             class="flex-shrink-0 border border-g-border rounded-[12px] px-4 py-2.5 text-sm text-g-gray hover:border-g-blue hover:text-g-blue transition-colors">Add</button>
@@ -2925,10 +2925,16 @@
 
         // ── Tag management ────────────────────────────────────────────────────────
         function handleTagKey(e) {
-            if (e.key === 'Enter' || e.key === ',') {
+            if (e.key === 'Enter' || e.key === ',' || e.key === ' ') {
                 e.preventDefault()
                 addTagFromInput()
             }
+        }
+
+        function handleTagInput(e) {
+            const val = e.target.value.trim().toLowerCase().replace(/^#/, '')
+            const opts = Array.from(qs('#tag-datalist').options).map(o => o.value.toLowerCase())
+            if (opts.includes(val)) addTagFromInput()
         }
 
         function addTagFromInput() {
@@ -2942,6 +2948,11 @@
 
         function removeTag(tag) {
             M.tags = M.tags.filter(t => t !== tag)
+            renderTagChips()
+        }
+
+        function removeAiTag(tag) {
+            M.aiTags = M.aiTags.filter(t => t !== tag)
             renderTagChips()
         }
 
@@ -2971,7 +2982,9 @@
             const aiTags = Array.isArray(M.aiTags) ? M.aiTags.filter(Boolean) : []
 
             aiContainer.innerHTML = aiTags.map(t => `
-                <span class="bg-purple-50 text-purple-600 text-xs px-2 py-0.5 rounded-full border border-purple-100">✦ ${escHtml(t)}</span>`).join('')
+                <span class="inline-flex items-center gap-1 bg-purple-50 text-purple-600 text-xs px-2 py-0.5 rounded-full border border-purple-100">✦ ${escHtml(t)}
+                  <button type="button" onclick="removeAiTag('${escAttr(t)}')" class="ml-0.5 hover:text-purple-800 leading-none">&times;</button>
+                </span>`).join('')
             aiSection.classList.toggle('hidden', aiTags.length === 0)
         }
 
