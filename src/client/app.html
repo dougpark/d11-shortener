@@ -2166,6 +2166,10 @@
                 ? `<span class="bg-yellow-50 text-yellow-600 text-xs font-medium px-2 py-0.5 rounded-full border border-yellow-100">Archived</span>`
                 : ''
 
+            const aiBadge = b.ai_processed_at
+                ? `<span class="bg-purple-50 text-purple-600 text-xs font-medium px-1.5 py-0.5 rounded-full border border-purple-100" title="AI enriched ${escAttr(fmtDate(b.ai_processed_at))}">✦</span>`
+                : ''
+
             const favicon = b.favicon_url
                 ? `<img src="${escAttr(b.favicon_url)}" class="w-5 h-5 rounded-[4px] object-contain flex-shrink-0" onerror="this.style.display='none'" loading="lazy">`
                 : `<div class="w-5 h-5 bg-blue-100 rounded-[4px] flex-shrink-0 flex items-center justify-center">
@@ -2186,7 +2190,7 @@
             class="text-sm font-semibold text-g-black hover:text-g-blue transition-colors truncate max-w-sm">
             ${escHtml(b.title || b.url)}
           </a>
-          ${pubBadge}${archBadge}
+          ${pubBadge}${archBadge}${aiBadge}
           ${b.hit_count ? `<span class="text-g-gray text-xs">· ${b.hit_count} click${b.hit_count !== 1 ? 's' : ''}</span>` : ''}
           ${b.last_accessed ? `<span class="text-g-gray text-xs">· last ${escHtml(fmtDate(b.last_accessed))}</span>` : ''}
         </div>
@@ -2370,6 +2374,10 @@
                 ? `<span class="w-1.5 h-1.5 rounded-full bg-green-400 flex-shrink-0" title="Public"></span>`
                 : `<span class="w-1.5 h-1.5 rounded-full bg-gray-300 flex-shrink-0" title="Private"></span>`
 
+            const aiDot = b.ai_processed_at
+                ? `<span class="text-purple-500 text-[10px] flex-shrink-0" title="AI enriched ${escAttr(fmtDate(b.ai_processed_at))}">✦</span>`
+                : ''
+
             return `
   <div class="flex items-start gap-3 px-4 py-3 bg-white" data-id="${b.id}">
     <div class="mt-0.5 flex-shrink-0">${favicon}</div>
@@ -2382,7 +2390,7 @@
         </button>
       </div>
       <div class="flex items-center gap-2 mt-0.5 flex-wrap">
-        ${pubDot}
+        ${pubDot}${aiDot}
         <a href="${escAttr(fullShortLink)}" target="_blank" rel="noopener noreferrer" class="text-g-gray text-xs hover:text-g-blue hover:underline transition-colors truncate" title="${escAttr(b.url)}">${escHtml(shortUrl(b.url, 45))}</a>
         ${b.hit_count ? `<span class="text-g-gray text-xs">· ${b.hit_count} click${b.hit_count !== 1 ? 's' : ''}</span>` : ''}
         ${b.last_accessed ? `<span class="text-g-gray text-xs">· last ${escHtml(fmtDate(b.last_accessed))}</span>` : ''}
