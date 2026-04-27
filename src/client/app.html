@@ -2181,15 +2181,16 @@
       <div class="mt-0.5 flex-shrink-0">${favicon}</div>
       <div class="flex-1 min-w-0">
         <div class="flex flex-wrap items-center gap-1.5 mb-0.5">
-          <a href="${escAttr(b.url)}" target="_blank" rel="noopener noreferrer"
+          <a href="${escAttr(fullShortLink)}" target="_blank" rel="noopener noreferrer"
             class="text-sm font-semibold text-g-black hover:text-g-blue transition-colors truncate max-w-sm">
             ${escHtml(b.title || b.url)}
           </a>
           ${pubBadge}${archBadge}
+          ${b.hit_count ? `<span class="text-g-gray text-xs">· ${b.hit_count} click${b.hit_count !== 1 ? 's' : ''}</span>` : ''}
+          ${b.last_accessed ? `<span class="text-g-gray text-xs">· last ${escHtml(fmtDate(b.last_accessed))}</span>` : ''}
         </div>
         <div class="flex items-center gap-2 flex-wrap">
-          <a href="${escAttr(b.url)}" target="_blank" rel="noopener noreferrer" class="text-g-gray text-xs hover:text-g-blue hover:underline transition-colors truncate max-w-sm" title="${escAttr(b.url)}">${escHtml(shortUrl(b.url))}</a>
-          ${b.hit_count ? `<span class="text-g-gray text-xs">· ${b.hit_count} click${b.hit_count !== 1 ? 's' : ''}</span>` : ''}
+          <a href="${escAttr(fullShortLink)}" target="_blank" rel="noopener noreferrer" class="text-g-gray text-xs hover:text-g-blue hover:underline transition-colors truncate max-w-sm" title="${escAttr(b.url)}">${escHtml(shortUrl(b.url))}</a>
           ${b.created_at ? `<span class="text-g-gray text-xs">· ${escHtml(fmtDate(b.created_at))}</span>` : ''}
         </div>
       </div>
@@ -2373,7 +2374,7 @@
     <div class="mt-0.5 flex-shrink-0">${favicon}</div>
     <div class="flex-1 min-w-0">
       <div class="flex items-start gap-2">
-        <a href="${escAttr(b.url)}" target="_blank" rel="noopener noreferrer"
+        <a href="${escAttr(fullShortLink)}" target="_blank" rel="noopener noreferrer"
           class="text-sm font-semibold text-g-black leading-snug line-clamp-1 flex-1">${escHtml(b.title || b.url)}</a>
         <button onclick="openMobileActions(${b.id})" class="flex-shrink-0 p-1 -mr-1 text-g-gray">
           <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 6a2 2 0 110-4 2 2 0 010 4zm0 6a2 2 0 110-4 2 2 0 010 4zm0 6a2 2 0 110-4 2 2 0 010 4z"/></svg>
@@ -2381,8 +2382,9 @@
       </div>
       <div class="flex items-center gap-2 mt-0.5 flex-wrap">
         ${pubDot}
-        <a href="${escAttr(b.url)}" target="_blank" rel="noopener noreferrer" class="text-g-gray text-xs hover:text-g-blue hover:underline transition-colors truncate" title="${escAttr(b.url)}">${escHtml(shortUrl(b.url, 45))}</a>
-        ${b.hit_count ? `<span class="text-g-gray text-xs">· ${b.hit_count}</span>` : ''}
+        <a href="${escAttr(fullShortLink)}" target="_blank" rel="noopener noreferrer" class="text-g-gray text-xs hover:text-g-blue hover:underline transition-colors truncate" title="${escAttr(b.url)}">${escHtml(shortUrl(b.url, 45))}</a>
+        ${b.hit_count ? `<span class="text-g-gray text-xs">· ${b.hit_count} click${b.hit_count !== 1 ? 's' : ''}</span>` : ''}
+        ${b.last_accessed ? `<span class="text-g-gray text-xs">· last ${escHtml(fmtDate(b.last_accessed))}</span>` : ''}
         ${b.created_at ? `<span class="text-g-gray text-xs">· ${escHtml(fmtDate(b.created_at))}</span>` : ''}
       </div>
       ${b.ai_summary ? `<div class="mt-1"><p class="text-xs text-purple-600 leading-relaxed italic">${escHtml(b.ai_summary)}</p></div>` : ''}
