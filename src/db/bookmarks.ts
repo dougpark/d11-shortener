@@ -233,6 +233,8 @@ export async function updateBookmark(
     if (input.is_archived !== undefined) map.is_archived = input.is_archived ? 1 : 0
     if (input.tag_list !== undefined) map.tag_list = JSON.stringify(input.tag_list)
     if ('expires_at' in input) map.expires_at = input.expires_at ?? null
+    if ('ai_summary' in input) map.ai_summary = input.ai_summary ?? null
+    if (input.ai_tags !== undefined) map.ai_tags = JSON.stringify(input.ai_tags)
 
     const fields = Object.keys(map)
     if (fields.length === 0) return getBookmark(db, id, userId)

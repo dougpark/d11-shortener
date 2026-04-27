@@ -80,6 +80,8 @@ export type UpdateBookmarkInput = Partial<{
     is_archived: boolean
     tag_list: string[]
     expires_at: string | null
+    ai_summary: string | null
+    ai_tags: string[]
 }>
 
 export type ListBookmarksOptions = {

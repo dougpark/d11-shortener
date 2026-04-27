@@ -1420,6 +1420,11 @@
                         <button onclick="addTagFromInput()"
                             class="flex-shrink-0 border border-g-border rounded-[12px] px-4 py-2.5 text-sm text-g-gray hover:border-g-blue hover:text-g-blue transition-colors">Add</button>
                     </div>
+                    <div id="ai-tag-section" class="hidden mt-3">
+                        <p class="text-[11px] font-semibold text-g-gray uppercase tracking-wide mb-1.5">AI Tags</p>
+                        <div class="flex flex-wrap gap-1.5" id="ai-tag-chips"></div>
+                        <p class="text-xs text-g-gray mt-1">Saved separately from your own tags.</p>
+                    </div>
                 </div>
 
                 <!-- Public toggle + Expiry -->
@@ -2475,6 +2480,8 @@
             M.mode = 'add'
             M.isPublic = true
             M.tags = []
+            M.aiSummary = null
+            M.aiTags = []
             M.slugOk = false
             M.editId = null
             qs('#modal-title').textContent = 'Add Bookmark'
@@ -2495,7 +2502,6 @@
             populateTagDatalist()
             showEl('bookmark-modal')
             setTimeout(() => qs('#m-url').focus(), 50)
-            M.aiSummary = null; M.aiTags = []
             resetEnrichBtn()
             if (preUrl) { checkUrlDuplicate(preUrl); fetchPreview(); doEnrich() }
         }
@@ -2522,9 +2528,10 @@
             qs('#slug-live').textContent = b.slug
             qs('#slug-status').textContent = ''
             setModalPublicUI(M.isPublic)
-            renderTagChips()
             populateTagDatalist()
-            M.aiSummary = null; M.aiTags = []
+            M.aiSummary = b.ai_summary || null
+            M.aiTags = Array.isArray(b.ai_tags) ? [...b.ai_tags] : []
+            renderTagChips()
             showEl('bookmark-modal')
             setTimeout(() => qs('#m-url').focus(), 50)
         }
@@ -2743,6 +2750,8 @@
                 M.editId = b.id
                 M.isPublic = !!b.is_public
                 M.tags = Array.isArray(b.tag_list) ? [...b.tag_list] : []
+                M.aiSummary = b.ai_summary || null
+                M.aiTags = Array.isArray(b.ai_tags) ? [...b.ai_tags] : []
                 M.slugOk = true
                 qs('#modal-title').textContent = 'Edit Bookmark'
                 qs('#m-submit-text').textContent = 'Save Changes'
@@ -2818,6 +2827,16 @@
           #${escHtml(t)}
           <button type="button" onclick="removeTag('${escAttr(t)}')" class="ml-0.5 hover:text-blue-700 leading-none">&times;</button>
         </span>`).join('')
+
+            const aiSection = qs('#ai-tag-section')
+            const aiContainer = qs('#ai-tag-chips')
+            const aiTags = Array.isArray(M.aiTags) ? M.aiTags.filter(Boolean) : []
+
+            aiContainer.innerHTML = aiTags.map(t => `
+                <span class="inline-flex items-center gap-1 bg-amber-50 text-amber-700 text-xs font-medium px-2.5 py-1 rounded-full border border-amber-200">
+                    AI #${escHtml(t)}
+                </span>`).join('')
+            aiSection.classList.toggle('hidden', aiTags.length === 0)
         }
 
         function populateTagDatalist() {
@@ -2882,10 +2901,6 @@
                 // fill description if empty
                 if (M.aiSummary && !qs('#m-desc').value.trim()) {
                     qs('#m-desc').value = M.aiSummary
-                }
-                // merge AI tags (no duplicates)
-                for (const t of M.aiTags) {
-                    if (t && !M.tags.includes(t)) M.tags.push(t)
                 }
                 renderTagChips()
                 if (icon) icon.textContent = '✅'
