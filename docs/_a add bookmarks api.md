@@ -6,7 +6,6 @@
     - ai_summary
     - ai_synthesis 
     - ai_tags
-    - ai_synthesis 
     - plus all other columns that are currently in the news item card
 
 - what are other featues needed for a general purpose bookmark api?

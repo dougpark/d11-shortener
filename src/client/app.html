@@ -2154,7 +2154,7 @@
                 `<button onclick="filterByTag('${escAttr(t)}')" class="bg-[#F3F4F6] text-g-gray text-xs px-2 py-0.5 rounded-full hover:bg-g-blue hover:text-white transition-colors">#${escHtml(t)}</button>`
             ).join('')
             const aiTagsHtml = (Array.isArray(b.ai_tags) ? b.ai_tags : []).map(t =>
-                `<span class="bg-purple-50 text-purple-600 text-xs px-2 py-0.5 rounded-full border border-purple-100">✦ ${escHtml(t)}</span>`
+                `<button onclick="filterByTag('${escAttr(t)}')" class="bg-purple-50 text-purple-600 text-xs px-2 py-0.5 rounded-full border border-purple-100 hover:bg-purple-100 hover:text-purple-800 transition-colors">✦ ${escHtml(t)}</button>`
             ).join('')
 
             const pubBadge = b.is_public
@@ -2228,13 +2228,16 @@
       </div>
     </div>
     <!-- Full-width description + tags below the top row -->
-    ${b.short_description ? `
-    <div class="mt-2 pl-8">
-      <p id="desc-${b.id}" class="text-xs text-g-gray leading-relaxed ${S.expandDescs ? '' : 'line-clamp-2'}">${escHtml(b.short_description)}</p>
-      <button onclick="toggleDesc(${b.id}, this)" class="text-xs text-g-blue hover:underline mt-0.5" data-expanded="${S.expandDescs}">${S.expandDescs ? 'show less' : 'show more'}</button>
-    </div>` : ''}
     ${b.ai_summary ? `<div class="mt-1.5 pl-8"><p class="text-xs text-purple-600 leading-relaxed italic">${escHtml(b.ai_summary)}</p></div>` : ''}
     ${(tags || aiTagsHtml) ? `<div class="flex flex-wrap gap-1 mt-2 pl-8">${tags}${aiTagsHtml}</div>` : ''}
+    ${b.short_description ? `
+    <div class="mt-1.5 pl-8">
+      <button onclick="toggleSrc(this)" class="text-[9px] font-mono text-amber-400 hover:text-amber-600 bg-amber-50 hover:bg-amber-100 px-1.5 py-0.5 rounded transition-colors" title="Show original description">src</button>
+      <div class="src-original hidden mt-1 pt-1.5 border-t border-dashed border-amber-200/70">
+        <div class="text-[9px] font-semibold text-amber-500 uppercase tracking-wider mb-1">Description</div>
+        <p class="text-xs text-g-gray leading-relaxed">${escHtml(b.short_description)}</p>
+      </div>
+    </div>` : ''}
   </div>`
         }
 
@@ -2294,6 +2297,10 @@
             toast('Short link copied!')
         }
 
+        function toggleSrc(btn) {
+            btn.closest('div').querySelector('.src-original').classList.toggle('hidden')
+        }
+
         function toggleDesc(id, btn) {
             const p = qs(`#desc-${id}`)
             if (!p) return
@@ -2348,7 +2355,7 @@
                 `<button onclick="filterByTag('${escAttr(t)}')" class="bg-[#F3F4F6] text-g-gray text-xs px-2 py-0.5 rounded-full hover:bg-g-blue hover:text-white transition-colors">#${escHtml(t)}</button>`
             ).join('')
             const aiTagsHtml = (Array.isArray(b.ai_tags) ? b.ai_tags : []).map(t =>
-                `<span class="bg-purple-50 text-purple-600 text-xs px-2 py-0.5 rounded-full border border-purple-100">✦ ${escHtml(t)}</span>`
+                `<button onclick="filterByTag('${escAttr(t)}')" class="bg-purple-50 text-purple-600 text-xs px-2 py-0.5 rounded-full border border-purple-100 hover:bg-purple-100 hover:text-purple-800 transition-colors">✦ ${escHtml(t)}</button>`
             ).join('')
 
             const favicon = b.favicon_url
@@ -2378,13 +2385,16 @@
         ${b.hit_count ? `<span class="text-g-gray text-xs">· ${b.hit_count}</span>` : ''}
         ${b.created_at ? `<span class="text-g-gray text-xs">· ${escHtml(fmtDate(b.created_at))}</span>` : ''}
       </div>
-      ${b.short_description ? `
-      <div class="relative mt-1 cursor-pointer" onclick="toggleMobileDesc(this)" data-expanded="${S.expandDescs}">
-        <p class="text-xs text-g-gray leading-relaxed transition-all ${S.expandDescs ? '' : 'line-clamp-2'}">${escHtml(b.short_description)}</p>
-        <div class="absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-white to-transparent pointer-events-none desc-fade${S.expandDescs ? ' hidden' : ''}"></div>
-      </div>` : ''}
       ${b.ai_summary ? `<div class="mt-1"><p class="text-xs text-purple-600 leading-relaxed italic">${escHtml(b.ai_summary)}</p></div>` : ''}
       ${(tags || aiTagsHtml) ? `<div class="flex flex-wrap gap-1 mt-1.5">${tags}${aiTagsHtml}</div>` : ''}
+      ${b.short_description ? `
+      <div class="mt-1">
+        <button onclick="toggleSrc(this)" class="text-[9px] font-mono text-amber-400 hover:text-amber-600 bg-amber-50 hover:bg-amber-100 px-1.5 py-0.5 rounded transition-colors" title="Show original description">src</button>
+        <div class="src-original hidden mt-1 pt-1.5 border-t border-dashed border-amber-200/70">
+          <div class="text-[9px] font-semibold text-amber-500 uppercase tracking-wider mb-1">Description</div>
+          <p class="text-xs text-g-gray leading-relaxed">${escHtml(b.short_description)}</p>
+        </div>
+      </div>` : ''}
     </div>
   </div>`
         }
