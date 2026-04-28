@@ -1,19 +1,24 @@
 // src/routes/v1.ts — Public API v1
 //
 // Route groups and their auth:
-//   GET  /api/v1/posts           — apiTokenMiddleware  (read bookmarks)
-//   GET  /api/v1/posts/updated   — apiTokenMiddleware  (last-change timestamp)
-//   GET  /api/v1/tags            — apiTokenMiddleware  (tag list with counts)
-//   POST /api/v1/rss/posts       — apiTokenMiddleware  (ingest scraped RSS items, rss:ingest scope)
-//   GET  /api/v1/tokens          — authMiddleware      (list my API tokens)
-//   POST /api/v1/tokens          — authMiddleware      (create API token)
-//   DELETE /api/v1/tokens/:id    — authMiddleware      (revoke API token)
+//   GET    /api/v1/posts           — apiTokenMiddleware  (posts:read)
+//   GET    /api/v1/posts/updated   — apiTokenMiddleware  (posts:read)
+//   GET    /api/v1/posts/:id       — apiTokenMiddleware  (posts:read)
+//   POST   /api/v1/posts           — apiTokenMiddleware  (posts:write, single bookmark)
+//   POST   /api/v1/posts/batch     — apiTokenMiddleware  (posts:write, up to 50 bookmarks)
+//   PATCH  /api/v1/posts/:id       — apiTokenMiddleware  (posts:write)
+//   DELETE /api/v1/posts/:id       — apiTokenMiddleware  (posts:write)
+//   GET    /api/v1/tags            — apiTokenMiddleware  (tags:read)
+//   POST   /api/v1/rss/posts       — apiTokenMiddleware  (rss:ingest)
+//   GET    /api/v1/tokens          — authMiddleware      (list my API tokens)
+//   POST   /api/v1/tokens          — authMiddleware      (create API token)
+//   DELETE /api/v1/tokens/:id      — authMiddleware      (revoke API token)
 //
 // Middleware is applied in index.ts so this file contains only handlers.
 
 import { Hono } from 'hono'
 import type { Env, Variables } from '../index.ts'
-import type { Bookmark } from '../db/types.ts'
+import type { Bookmark, ApiToken, UpdateBookmarkInput } from '../db/types.ts'
 import { generateToken, hashToken } from '../utils/auth.ts'
 import {
     createApiToken,
@@ -21,12 +26,30 @@ import {
     deleteApiToken,
 } from '../db/api_tokens.ts'
 import { extractKeywords, buildTagList } from '../utils/rss.ts'
+import {
+    getBookmark,
+    createBookmark,
+    updateBookmark,
+    deleteBookmark,
+    isSlugAvailable,
+} from '../db/bookmarks.ts'
 
 const v1 = new Hono<{ Bindings: Env; Variables: Variables }>()
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-/** Shape a raw DB bookmark row into a clean v1 response object. */
+/** Check whether an API token's scopes include the required scope (or wildcard). */
+function hasScope(token: ApiToken | undefined, scope: string): boolean {
+    if (!token) return false
+    let scopes: string[] = []
+    try { scopes = JSON.parse(token.scopes) } catch { return false }
+    return scopes.includes('*') || scopes.includes(scope)
+}
+
+/** Generate a short random slug (6 chars). */
+function randomSlug(): string {
+    return crypto.randomUUID().replace(/-/g, '').slice(0, 6)
+}
 function formatPost(b: Bookmark) {
     let tags: string[] = []
     try { tags = JSON.parse(b.tag_list) } catch { /* leave empty */ }
@@ -49,7 +72,9 @@ function formatPost(b: Bookmark) {
 }
 
 // ─── GET /api/v1/posts ────────────────────────────────────────────────────────
+// Requires posts:read scope.
 // Query params:
+//   url      — exact URL match (returns first hit or 404)
 //   tag      — filter by tag; repeat for AND semantics: ?tag=bun&tag=tools (max 3)
 //   search   — LIKE match across title, url, description
 //   since    — ISO 8601 UTC; only return bookmarks created_at > since
@@ -58,8 +83,22 @@ function formatPost(b: Bookmark) {
 //   unread   — "1" to return only unread (never-clicked) bookmarks
 //   archived — "1" to include archived bookmarks (excluded by default)
 v1.get('/posts', async (c) => {
+    const apiToken = c.get('apiToken')
+    if (!hasScope(apiToken, 'posts:read')) return c.json({ error: 'Forbidden', hint: 'Token missing posts:read scope' }, 403)
     const user = c.get('user')
     const q = c.req.query()
+
+    // Exact URL lookup shortcut
+    if (q.url) {
+        let urlVal: string
+        try { urlVal = new URL(q.url).toString() } catch { return c.json({ error: 'invalid url' }, 400) }
+        const row = await c.env.DB
+            .prepare('SELECT * FROM bookmarks WHERE user_id = ? AND url = ? LIMIT 1')
+            .bind(user.id, urlVal)
+            .first<Bookmark>()
+        if (!row) return c.json({ error: 'not found' }, 404)
+        return c.json({ data: formatPost(row) })
+    }
 
     // Multi-tag: ?tag=bun&tag=tools  (Hono: queries() returns string[])
     const rawTags = c.req.queries('tag') ?? []
@@ -126,7 +165,10 @@ v1.get('/posts', async (c) => {
 // ─── GET /api/v1/posts/updated ────────────────────────────────────────────────
 // Returns the timestamp of the most recently created or updated bookmark.
 // Useful for polling: only call posts if this has changed since your last fetch.
+// Requires posts:read scope.
 v1.get('/posts/updated', async (c) => {
+    const apiToken = c.get('apiToken')
+    if (!hasScope(apiToken, 'posts:read')) return c.json({ error: 'Forbidden', hint: 'Token missing posts:read scope' }, 403)
     const user = c.get('user')
     const row = await c.env.DB
         .prepare(
@@ -143,7 +185,10 @@ v1.get('/posts/updated', async (c) => {
 // ─── GET /api/v1/tags ─────────────────────────────────────────────────────────
 // Returns all tags in use with their bookmark counts, ordered by count desc.
 // Uses SQLite's json_each() to unpack the tag_list JSON array per row.
+// Requires tags:read scope.
 v1.get('/tags', async (c) => {
+    const apiToken = c.get('apiToken')
+    if (!hasScope(apiToken, 'tags:read')) return c.json({ error: 'Forbidden', hint: 'Token missing tags:read scope' }, 403)
     const user = c.get('user')
     const { results } = await c.env.DB
         .prepare(
@@ -157,6 +202,232 @@ v1.get('/tags', async (c) => {
         .all<{ tag: string; count: number }>()
 
     return c.json({ data: results })
+})
+
+// ─── GET /api/v1/posts/:id ────────────────────────────────────────────────────
+// Fetch a single bookmark by ID. Requires posts:read scope.
+v1.get('/posts/:id', async (c) => {
+    const apiToken = c.get('apiToken')
+    if (!hasScope(apiToken, 'posts:read')) return c.json({ error: 'Forbidden', hint: 'Token missing posts:read scope' }, 403)
+    const user = c.get('user')
+    const id = parseInt(c.req.param('id'), 10)
+    if (isNaN(id)) return c.json({ error: 'invalid id' }, 400)
+
+    const row = await getBookmark(c.env.DB, id, user.id)
+    if (!row) return c.json({ error: 'not found' }, 404)
+    return c.json({ data: formatPost(row) })
+})
+
+// ─── POST /api/v1/posts ───────────────────────────────────────────────────────
+// Create a single bookmark. Requires posts:write scope.
+// slug is auto-generated if omitted (5 retries before giving up).
+// Returns 409 if the URL already exists for this user.
+v1.post('/posts', async (c) => {
+    const apiToken = c.get('apiToken')
+    if (!hasScope(apiToken, 'posts:write')) return c.json({ error: 'Forbidden', hint: 'Token missing posts:write scope' }, 403)
+    const user = c.get('user')
+
+    let body: Record<string, unknown>
+    try { body = await c.req.json() } catch { return c.json({ error: 'Invalid JSON body' }, 400) }
+
+    const url = typeof body.url === 'string' ? body.url.trim() : ''
+    if (!url) return c.json({ error: 'url is required' }, 400)
+    try { new URL(url) } catch { return c.json({ error: 'invalid url' }, 400) }
+
+    // Duplicate URL check
+    const existing = await c.env.DB
+        .prepare('SELECT id FROM bookmarks WHERE user_id = ? AND url = ? LIMIT 1')
+        .bind(user.id, url)
+        .first<{ id: number }>()
+    if (existing) return c.json({ error: 'url already exists', id: existing.id }, 409)
+
+    // Resolve slug: use provided if valid, otherwise auto-generate (up to 5 attempts)
+    let slug: string
+    if (typeof body.slug === 'string' && /^[a-z0-9_-]{1,64}$/.test(body.slug.trim())) {
+        slug = body.slug.trim()
+        if (!(await isSlugAvailable(c.env.DB, user.id, slug)))
+            return c.json({ error: 'slug already taken' }, 409)
+    } else {
+        slug = ''
+        for (let attempt = 0; attempt < 5; attempt++) {
+            const candidate = randomSlug()
+            if (await isSlugAvailable(c.env.DB, user.id, candidate)) { slug = candidate; break }
+        }
+        if (!slug) return c.json({ error: 'Could not generate a unique slug — try again' }, 500)
+    }
+
+    const tag_list = Array.isArray(body.tag_list)
+        ? (body.tag_list as unknown[]).filter(t => typeof t === 'string') as string[]
+        : []
+
+    const bookmark = await createBookmark(c.env.DB, {
+        user_id: user.id,
+        url,
+        slug,
+        title: typeof body.title === 'string' ? body.title.trim() || undefined : undefined,
+        short_description: typeof body.short_description === 'string' ? body.short_description.trim() || undefined : undefined,
+        favicon_url: typeof body.favicon_url === 'string' ? body.favicon_url.trim() || undefined : undefined,
+        is_public: typeof body.is_public === 'boolean' ? body.is_public : false,
+        tag_list,
+        expires_at: typeof body.expires_at === 'string' ? body.expires_at : undefined,
+        ai_summary: typeof body.ai_summary === 'string' ? body.ai_summary : undefined,
+        ai_tags: Array.isArray(body.ai_tags) ? body.ai_tags.filter(t => typeof t === 'string') as string[] : undefined,
+    })
+
+    return c.json({ data: formatPost(bookmark) }, 201)
+})
+
+// ─── POST /api/v1/posts/batch ─────────────────────────────────────────────────
+// Bulk create up to 50 bookmarks. Requires posts:write scope.
+// Invalid items are skipped (not fatal). Duplicate URLs are skipped silently.
+// Returns { inserted, skipped_duplicates, invalid[] }.
+v1.post('/posts/batch', async (c) => {
+    const apiToken = c.get('apiToken')
+    if (!hasScope(apiToken, 'posts:write')) return c.json({ error: 'Forbidden', hint: 'Token missing posts:write scope' }, 403)
+    const user = c.get('user')
+
+    let body: unknown
+    try { body = await c.req.json() } catch { return c.json({ error: 'Invalid JSON body' }, 400) }
+    if (typeof body !== 'object' || body === null) return c.json({ error: 'Body must be an object' }, 400)
+    const { items } = body as Record<string, unknown>
+    if (!Array.isArray(items) || items.length === 0) return c.json({ error: 'items must be a non-empty array' }, 400)
+    if (items.length > 50) return c.json({ error: 'Batch too large — max 50 items' }, 400)
+
+    // Load existing URLs + slugs for this user (dedup + slug collision avoidance)
+    const { results: existing } = await c.env.DB
+        .prepare('SELECT url, slug FROM bookmarks WHERE user_id = ?')
+        .bind(user.id)
+        .all<{ url: string; slug: string }>()
+    const existingUrls = new Set(existing.map(r => r.url))
+    const existingSlugs = new Set(existing.map(r => r.slug))
+
+    type ValidItem = { url: string; slug: string; title: string | null; short_description: string | null; favicon_url: string | null; is_public: number; tag_list: string; expires_at: string | null; ai_summary: string | null; ai_tags: string | null }
+    const validItems: ValidItem[] = []
+    const invalid: { index: number; reason: string }[] = []
+    let skipped_duplicates = 0
+
+    for (let i = 0; i < items.length; i++) {
+        const item = items[i]
+        if (typeof item !== 'object' || item === null) { invalid.push({ index: i, reason: 'not an object' }); continue }
+        const b = item as Record<string, unknown>
+
+        const url = typeof b.url === 'string' ? b.url.trim() : ''
+        if (!url) { invalid.push({ index: i, reason: 'url is required' }); continue }
+        try { new URL(url) } catch { invalid.push({ index: i, reason: `invalid url: ${url.slice(0, 80)}` }); continue }
+
+        if (existingUrls.has(url)) { skipped_duplicates++; continue }
+
+        // Resolve slug
+        let slug = typeof b.slug === 'string' && /^[a-z0-9_-]{1,64}$/.test(b.slug.trim()) ? b.slug.trim() : ''
+        if (!slug || existingSlugs.has(slug)) {
+            slug = ''
+            for (let attempt = 0; attempt < 5; attempt++) {
+                const candidate = randomSlug()
+                if (!existingSlugs.has(candidate)) { slug = candidate; break }
+            }
+            if (!slug) { invalid.push({ index: i, reason: 'could not generate unique slug' }); continue }
+        }
+
+        const tag_list = Array.isArray(b.tag_list)
+            ? JSON.stringify((b.tag_list as unknown[]).filter(t => typeof t === 'string'))
+            : '[]'
+
+        validItems.push({
+            url,
+            slug,
+            title: typeof b.title === 'string' ? b.title.trim() || null : null,
+            short_description: typeof b.short_description === 'string' ? b.short_description.trim() || null : null,
+            favicon_url: typeof b.favicon_url === 'string' ? b.favicon_url.trim() || null : null,
+            is_public: b.is_public === true ? 1 : 0,
+            tag_list,
+            expires_at: typeof b.expires_at === 'string' ? b.expires_at : null,
+            ai_summary: typeof b.ai_summary === 'string' ? b.ai_summary : null,
+            ai_tags: Array.isArray(b.ai_tags) ? JSON.stringify(b.ai_tags.filter(t => typeof t === 'string')) : null,
+        })
+        existingUrls.add(url)
+        existingSlugs.add(slug)
+    }
+
+    if (validItems.length === 0) return c.json({ error: 'No valid items in batch', invalid }, 400)
+
+    const now = new Date().toISOString()
+    const stmts = validItems.map(item =>
+        c.env.DB.prepare(
+            `INSERT INTO bookmarks (user_id, url, slug, title, short_description, favicon_url, is_public, tag_list, expires_at, ai_summary, ai_tags, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        ).bind(user.id, item.url, item.slug, item.title, item.short_description, item.favicon_url, item.is_public, item.tag_list, item.expires_at, item.ai_summary, item.ai_tags, now, now)
+    )
+
+    await c.env.DB.batch(stmts)
+
+    return c.json({
+        inserted: validItems.length,
+        skipped_duplicates,
+        invalid: invalid.length > 0 ? invalid : undefined,
+    }, 201)
+})
+
+// ─── PATCH /api/v1/posts/:id ──────────────────────────────────────────────────
+// Update any subset of fields on a bookmark. Requires posts:write scope.
+v1.patch('/posts/:id', async (c) => {
+    const apiToken = c.get('apiToken')
+    if (!hasScope(apiToken, 'posts:write')) return c.json({ error: 'Forbidden', hint: 'Token missing posts:write scope' }, 403)
+    const user = c.get('user')
+    const id = parseInt(c.req.param('id'), 10)
+    if (isNaN(id)) return c.json({ error: 'invalid id' }, 400)
+
+    const row = await getBookmark(c.env.DB, id, user.id)
+    if (!row) return c.json({ error: 'not found' }, 404)
+
+    let body: Record<string, unknown>
+    try { body = await c.req.json() } catch { return c.json({ error: 'Invalid JSON body' }, 400) }
+
+    // Validate optional fields before writing
+    if ('url' in body) {
+        if (typeof body.url !== 'string') return c.json({ error: 'url must be a string' }, 400)
+        try { new URL(body.url) } catch { return c.json({ error: 'invalid url' }, 400) }
+    }
+    if ('slug' in body && (typeof body.slug !== 'string' || !/^[a-z0-9_-]{1,64}$/.test(body.slug)))
+        return c.json({ error: 'slug must be 1-64 lowercase alphanumeric/dash/underscore characters' }, 400)
+    if ('slug' in body && typeof body.slug === 'string' && body.slug !== row.slug) {
+        if (!(await isSlugAvailable(c.env.DB, user.id, body.slug)))
+            return c.json({ error: 'slug already taken' }, 409)
+    }
+
+    const patch: UpdateBookmarkInput = {}
+    if ('url' in body) patch.url = body.url as string
+    if ('slug' in body) patch.slug = body.slug as string
+    if ('title' in body) patch.title = typeof body.title === 'string' ? body.title : ''
+    if ('short_description' in body) patch.short_description = typeof body.short_description === 'string' ? body.short_description : ''
+    if ('favicon_url' in body) patch.favicon_url = typeof body.favicon_url === 'string' ? body.favicon_url : ''
+    if ('is_public' in body) patch.is_public = Boolean(body.is_public)
+    if ('is_archived' in body) patch.is_archived = Boolean(body.is_archived)
+    if ('tag_list' in body && Array.isArray(body.tag_list))
+        patch.tag_list = (body.tag_list as unknown[]).filter(t => typeof t === 'string') as string[]
+    if ('expires_at' in body) patch.expires_at = typeof body.expires_at === 'string' ? body.expires_at : null
+    if ('ai_summary' in body) patch.ai_summary = typeof body.ai_summary === 'string' ? body.ai_summary : null
+    if ('ai_tags' in body && Array.isArray(body.ai_tags))
+        patch.ai_tags = (body.ai_tags as unknown[]).filter(t => typeof t === 'string') as string[]
+
+    if (Object.keys(patch).length === 0) return c.json({ error: 'No patchable fields provided' }, 400)
+
+    const updated = await updateBookmark(c.env.DB, id, user.id, patch)
+    if (!updated) return c.json({ error: 'not found' }, 404)
+    return c.json({ data: formatPost(updated) })
+})
+
+// ─── DELETE /api/v1/posts/:id ─────────────────────────────────────────────────
+// Hard-delete a bookmark. Requires posts:write scope.
+v1.delete('/posts/:id', async (c) => {
+    const apiToken = c.get('apiToken')
+    if (!hasScope(apiToken, 'posts:write')) return c.json({ error: 'Forbidden', hint: 'Token missing posts:write scope' }, 403)
+    const user = c.get('user')
+    const id = parseInt(c.req.param('id'), 10)
+    if (isNaN(id)) return c.json({ error: 'invalid id' }, 400)
+
+    const deleted = await deleteBookmark(c.env.DB, id, user.id)
+    if (!deleted) return c.json({ error: 'not found' }, 404)
+    return c.json({ deleted: true, id })
 })
 
 // ─── GET /api/v1/tokens ───────────────────────────────────────────────────────

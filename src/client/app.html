@@ -756,10 +756,9 @@
                         <input type="checkbox" id="scope-tags-read" checked class="accent-g-blue"> Read tags
                         <span class="text-[10px] text-g-gray font-mono ml-auto">tags:read</span>
                     </label>
-                    <label class="flex items-center gap-2 text-sm text-g-gray cursor-not-allowed">
-                        <input type="checkbox" disabled class="accent-g-blue"> Write bookmarks
+                    <label class="flex items-center gap-2 text-sm text-g-black cursor-pointer">
+                        <input type="checkbox" id="scope-posts-write" class="accent-g-blue"> Write bookmarks
                         <span class="text-[10px] text-g-gray font-mono ml-auto">posts:write</span>
-                        <span class="text-[10px] text-g-gray italic">coming soon</span>
                     </label>
                     <label class="flex items-center gap-2 text-sm text-g-black cursor-pointer">
                         <input type="checkbox" id="scope-rss-ingest" class="accent-g-blue"> Ingest RSS posts
@@ -1752,6 +1751,7 @@
 
             const scopes = []
             if (qs('#scope-posts-read').checked) scopes.push('posts:read')
+            if (qs('#scope-posts-write')?.checked) scopes.push('posts:write')
             if (qs('#scope-tags-read').checked) scopes.push('tags:read')
             if (qs('#scope-rss-ingest')?.checked) scopes.push('rss:ingest')
             if (S.user?.is_admin) {

@@ -1,14 +1,34 @@
+# implementation details for bookmark API
+
+Deployed (19f9d609). Here's what's live:
+
+New routes (all require posts:write or posts:read scope):
+
+Method	Path	Scope	Notes
+GET	/api/v1/posts?url=<url>	posts:read	Exact-match shortcut
+GET	/api/v1/posts/:id	posts:read	Single bookmark by ID
+POST	/api/v1/posts	posts:write	Single; auto-slug if omitted; 409 on dupe URL
+POST	/api/v1/posts/batch	posts:write	Up to 50; skip-invalid + skip-dupe
+PATCH	/api/v1/posts/:id	posts:write	Partial update; 409 if new slug taken
+DELETE	/api/v1/posts/:id	posts:write	Returns { deleted: true, id }
+Also updated:
+
+Existing GET /posts, GET /posts/updated, GET /tags now enforce scope (403 if missing)
+Token UI: "Write bookmarks" checkbox is now active (posts:write), no longer disabled/coming-soon
+
+
+
+
+
+
+
+
+
+
 # Add bookmark api
 - batch sizes similar to ai enrichment plan
 - authorize with scope and token by user
-- include new columns in the news item card:
-    - title
-    - ai_summary
-    - ai_synthesis (new)
-    - ai_synthesis_at (new)
-    - ai_tags
-    - full_text_at (new)
-    - plus all other columns that are currently in the bookmarks table
+- columns that are currently in the bookmarks table
 
 - what are other featues needed for a general purpose bookmark api?
 
