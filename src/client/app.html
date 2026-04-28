@@ -2644,8 +2644,8 @@
             qs('#m-submit-text').textContent = 'Save Changes'
             qs('#m-url').value = b.url
             qs('#m-slug').value = b.slug
-            qs('#m-title').value = b.title || ''
-            qs('#m-desc').value = b.short_description || ''
+            qs('#m-title').value = decodeHtml(b.title || '')
+            qs('#m-desc').value = decodeHtml(b.short_description || '')
             qs('#m-expires').value = b.expires_at ? b.expires_at.slice(0, 10) : ''
             qs('#m-url-error').classList.add('hidden')
             qs('#m-slug-error').classList.add('hidden')
@@ -2765,8 +2765,14 @@
             return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
         }
 
+        function decodeHtml(s) {
+            const ta = document.createElement('textarea')
+            ta.innerHTML = String(s)
+            return ta.value
+        }
         function escHtml(s) {
-            return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            const d = decodeHtml(s)
+            return d.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
         }
         function escAttr(s) {
             return String(s).replace(/"/g, '&quot;').replace(/'/g, '&#39;')
@@ -2886,8 +2892,8 @@
                 qs('#m-submit-text').textContent = 'Save Changes'
                 qs('#m-url').value = b.url
                 qs('#m-slug').value = b.slug
-                if (!qs('#m-title').value) qs('#m-title').value = b.title || ''
-                if (!qs('#m-desc').value) qs('#m-desc').value = b.short_description || ''
+                if (!qs('#m-title').value) qs('#m-title').value = decodeHtml(b.title || '')
+                if (!qs('#m-desc').value) qs('#m-desc').value = decodeHtml(b.short_description || '')
                 qs('#m-expires').value = b.expires_at ? b.expires_at.slice(0, 10) : ''
                 qs('#slug-prefix-hint').textContent = S.user?.slug_prefix || ''
                 qs('#slug-live').textContent = b.slug

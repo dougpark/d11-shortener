@@ -255,8 +255,14 @@
         function qs(sel) { return document.querySelector(sel) }
         function showEl(id) { qs('#' + id)?.classList.remove('hidden') }
         function hideEl(id) { qs('#' + id)?.classList.add('hidden') }
+        function decodeHtml(s) {
+            const ta = document.createElement('textarea')
+            ta.innerHTML = String(s ?? '')
+            return ta.value
+        }
         function escHtml(s) {
-            return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+            const d = decodeHtml(s)
+            return d.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
         }
 
         function openSheet() {
