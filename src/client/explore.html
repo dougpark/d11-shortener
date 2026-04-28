@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 
+<!-- explore.html -->
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -265,6 +267,44 @@
         </div>
     </main>
 
+    <!-- ── Detail modal ── -->
+    <div id="detail-backdrop"
+        class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm hidden items-center justify-center p-4"
+        onclick="closeDetail()">
+        <div id="detail-modal" class="bg-white rounded-[20px] shadow-2xl w-full max-w-md p-6 flex flex-col gap-4"
+            onclick="event.stopPropagation()">
+            <div class="flex items-start gap-3">
+                <div id="d-favicon" class="flex-shrink-0 mt-0.5"></div>
+                <div class="flex-1 min-w-0">
+                    <h2 id="d-title" class="font-semibold text-g-black text-base leading-snug"></h2>
+                    <a id="d-url" href="#" target="_blank" rel="noopener noreferrer"
+                        class="text-xs text-g-blue hover:underline truncate block mt-0.5"></a>
+                </div>
+                <button onclick="closeDetail()"
+                    class="flex-shrink-0 p-1 text-g-gray hover:text-g-black transition-colors rounded">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <p id="d-desc" class="text-sm text-g-gray leading-relaxed hidden"></p>
+            <div id="d-ai-summary-wrap" class="hidden bg-blue-50 rounded-[12px] p-3">
+                <p class="text-[10px] font-semibold text-g-blue uppercase tracking-wider mb-1">AI Summary</p>
+                <p id="d-ai-summary" class="text-xs text-g-black leading-relaxed"></p>
+            </div>
+            <div id="d-tags-wrap" class="hidden flex-wrap gap-1.5 flex"></div>
+            <div class="flex items-center justify-between text-[11px] text-g-gray border-t border-g-border pt-3">
+                <span id="d-saved"></span>
+                <span id="d-hits"></span>
+            </div>
+            <a id="d-open-btn" href="#" target="_blank" rel="noopener noreferrer"
+                class="block text-center text-sm font-semibold text-white bg-g-blue hover:bg-blue-600 transition-colors rounded-[10px] py-2">
+                Open link ↗
+            </a>
+        </div>
+    </div>
+
     <script>
         function qs(sel) { return document.querySelector(sel) }
         function showEl(id) { qs('#' + id)?.classList.remove('hidden') }
@@ -422,22 +462,101 @@
         syncUrl(false)
         updateNavButtons()
 
+        // ── Bookmark detail modal ─────────────────────────────────────────────
+        let allBookmarks = {}
+
+        function openDetail(id) {
+            const b = allBookmarks[id]
+            if (!b) return
+
+            // Favicon
+            qs('#d-favicon').innerHTML = faviconHtml(b, 'w-8 h-8 rounded-[8px]')
+
+            // Core fields
+            qs('#d-title').textContent = decodeHtml(b.title || b.url)
+            const urlEl = qs('#d-url')
+            urlEl.href = b.url
+            urlEl.textContent = b.url
+
+            // Description
+            const descEl = qs('#d-desc')
+            if (b.short_description) {
+                descEl.textContent = decodeHtml(b.short_description)
+                descEl.classList.remove('hidden')
+            } else {
+                descEl.classList.add('hidden')
+            }
+
+            // AI Summary
+            const aiWrap = qs('#d-ai-summary-wrap')
+            if (b.ai_summary) {
+                qs('#d-ai-summary').textContent = decodeHtml(b.ai_summary)
+                aiWrap.classList.remove('hidden')
+            } else {
+                aiWrap.classList.add('hidden')
+            }
+
+            // Tags
+            const tagsWrap = qs('#d-tags-wrap')
+            let tags = []
+            try { tags = JSON.parse(b.tag_list || '[]') } catch { }
+            let aiTags = []
+            try { aiTags = JSON.parse(b.ai_tags || '[]') } catch { }
+            const userTagsHtml = tags.map(t =>
+                `<span class="bg-[#F3F4F6] text-g-gray text-xs px-2 py-0.5 rounded-full">#${escHtml(t)}</span>`
+            ).join('')
+            const aiTagsHtml = aiTags.map(t =>
+                `<span class="bg-purple-50 text-purple-600 text-xs px-2 py-0.5 rounded-full border border-purple-100">✦ ${escHtml(t)}</span>`
+            ).join('')
+            if (userTagsHtml || aiTagsHtml) {
+                tagsWrap.innerHTML = userTagsHtml + aiTagsHtml
+                tagsWrap.classList.remove('hidden')
+            } else {
+                tagsWrap.classList.add('hidden')
+            }
+
+            // Meta
+            qs('#d-saved').textContent = b.created_at
+                ? 'Saved ' + new Date(b.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+                : ''
+            qs('#d-hits').textContent = b.hit_count > 0 ? b.hit_count + ' click' + (b.hit_count !== 1 ? 's' : '') : 'Never opened'
+
+            // Open button
+            qs('#d-open-btn').href = b.url
+
+            // Show
+            const backdrop = qs('#detail-backdrop')
+            backdrop.classList.remove('hidden')
+            backdrop.classList.add('flex')
+            document.body.style.overflow = 'hidden'
+        }
+
+        function closeDetail() {
+            const backdrop = qs('#detail-backdrop')
+            backdrop.classList.add('hidden')
+            backdrop.classList.remove('flex')
+            document.body.style.overflow = ''
+        }
+
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDetail() })
+
         // ── Favicon renderer ──────────────────────────────────────────────────
-        function makeFallbackIcon(letter) {
+        function makeFallbackIcon(letter, sizeClass = 'w-4 h-4') {
             const span = document.createElement('span')
-            span.className = 'w-4 h-4 bg-blue-100 text-g-blue rounded text-[9px] font-bold flex items-center justify-center flex-shrink-0'
+            span.className = sizeClass + ' bg-blue-100 text-g-blue rounded text-[9px] font-bold flex items-center justify-center flex-shrink-0'
             span.textContent = (letter || '?').toUpperCase()
             return span
         }
 
-        function faviconHtml(b) {
+        function faviconHtml(b, sizeClass = 'w-4 h-4') {
             const letter = ((b.title || b.url) + '?')[0]
+            const escapedLetter = escHtml(letter)
             if (b.favicon_url) {
                 return `<img src="${escHtml(b.favicon_url)}" alt="" loading="lazy"
-                    class="w-4 h-4 rounded object-contain flex-shrink-0"
-                    onerror="this.replaceWith(makeFallbackIcon('${escHtml(letter)}'))">`
+                    class="${sizeClass} rounded object-contain flex-shrink-0"
+                    onerror="this.replaceWith(makeFallbackIcon('${escapedLetter}', '${sizeClass}'))">`
             }
-            return `<span class="w-4 h-4 bg-blue-100 text-g-blue rounded text-[9px] font-bold flex items-center justify-center flex-shrink-0">${escHtml(letter.toUpperCase())}</span>`
+            return `<span class="${sizeClass} bg-blue-100 text-g-blue rounded text-[9px] font-bold flex items-center justify-center flex-shrink-0">${escapedLetter.toUpperCase()}</span>`
         }
 
         // ── Card renderer ─────────────────────────────────────────────────────
@@ -458,6 +577,7 @@
 
         function renderCard(group) {
             const links = group.bookmarks.map(b => {
+                allBookmarks[b.id] = b
                 const clipBtn = currentMode === 'community'
                     ? `<button class="clip-btn flex-shrink-0 p-1 opacity-40 group-hover:opacity-100 text-g-gray hover:text-g-blue transition-all rounded"
                                 data-url="${escHtml(b.url)}"
@@ -467,12 +587,15 @@
                     : ''
                 return `
                 <div class="link-row flex items-center gap-1 px-2 py-1.5 -mx-2 rounded-[8px] hover:bg-blue-50 group transition-colors">
-                    <a href="${escHtml(b.url)}" target="_blank" rel="noopener noreferrer"
-                       class="flex items-center gap-2.5 flex-1 min-w-0">
+                    <button onclick="openDetail(${b.id})" title="View details"
+                        class="relative z-10 flex-shrink-0 p-0.5 -m-0.5 hover:scale-110 transition-transform focus:outline-none focus:ring-2 focus:ring-g-blue rounded">
                         ${faviconHtml(b)}
-                        <span class="flex-1 text-sm text-g-black group-hover:text-g-blue transition-colors leading-snug truncate min-w-0">${escHtml(b.title || b.url)}</span>
-                        ${b.hit_count > 0 ? `<span class="text-[11px] text-g-gray flex-shrink-0 tabular-nums ml-1">${b.hit_count}</span>` : ''}
+                    </button>
+                    <a href="${escHtml(b.url)}" target="_blank" rel="noopener noreferrer"
+                       class="flex-1 text-sm text-g-black group-hover:text-g-blue transition-colors leading-snug truncate min-w-0">
+                        ${escHtml(b.title || b.url)}
                     </a>
+                    ${b.hit_count > 0 ? `<span class="text-[11px] text-g-gray flex-shrink-0 tabular-nums ml-1">${b.hit_count}</span>` : ''}
                     ${clipBtn}
                 </div>`
             }).join('')
@@ -647,6 +770,7 @@
             hideEl('grid')
             hideEl('empty')
             showEl('loading')
+            allBookmarks = {}
             try {
                 const apiUrl = '/api/e/' + encodeURIComponent(currentTag) + (currentMode === 'community' ? '?community' : '')
                 const res = await fetch(apiUrl)

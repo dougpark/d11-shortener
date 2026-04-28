@@ -441,7 +441,7 @@
         function setClipped(btn) {
             btn.innerHTML = CHECK_SVG
             btn.title = 'Already in Mine'
-            btn.className = btn.className.replace('text-g-gray', 'text-green-500').replace('opacity-40', 'opacity-100').replace('group-hover:opacity-100', '')
+            btn.className = btn.className.replace('text-g-gray', 'text-green-500').replace('opacity-40', 'opacity-100').replace('opacity-0', 'opacity-100').replace('group-hover:opacity-100', '')
             btn.dataset.clipped = '1'
         }
 
@@ -517,6 +517,9 @@
                 const origTagPillsHtml = tagsArr.map(t => t.split(':')[0].toLowerCase()).map(t =>
                     `<span class="text-[9px] text-g-gray/60 bg-g-border/30 px-1.5 py-0.5 rounded-full">#${escHtml(t)}</span>`
                 ).join('')
+                const aiBadge = hasAiData
+                    ? `<span class="bg-purple-50 text-purple-600 text-xs font-medium px-1.5 py-0.5 rounded-full border border-purple-100 flex-shrink-0" title="AI enriched">✦</span>`
+                    : ''
                 const devToggleBtn = hasAiData
                     ? `<button class="dev-toggle text-[9px] font-mono text-amber-400 hover:text-amber-600 bg-amber-50 hover:bg-amber-100 px-1.5 py-0.5 rounded transition-colors flex-shrink-0" title="Show original RSS data">src</button>`
                     : ''
@@ -534,14 +537,13 @@
                            class="flex-1 text-sm text-g-black group-hover:text-g-blue transition-colors leading-snug font-medium min-w-0">
                             ${escHtml(item.title || item.url)}
                         </a>
-                        ${clipBtn}
+                        ${aiBadge}${devToggleBtn}${clipBtn}
                     </div>
                     ${displaySummary ? `<p class="text-xs text-g-gray leading-relaxed line-clamp-2">${escHtml(displaySummary)}</p>` : ''}
                     <div class="flex items-center gap-2 mt-0.5">
                         ${freshBadge}
                         ${relTime ? `<span class="text-[10px] text-g-gray/70">${escHtml(relTime)}</span>` : ''}
                         ${feedLabel}
-                        ${devToggleBtn}
                     </div>
                     ${devPanel}
                 </div>`
@@ -619,13 +621,9 @@
                 : ''
             const tagsArr = (() => { try { return JSON.parse(item.tag_list || '[]') } catch { return [] } })()
             const aiTagsArr = (() => { try { return JSON.parse(item.ai_tags || '[]') } catch { return [] } })()
-            const primaryTags = [...new Set([
-                ...aiTagsArr.map(t => t.split(':')[0].toLowerCase()),
-                ...tagsArr.map(t => t.split(':')[0].toLowerCase())
-            ])].slice(0, 6)
-            const tagPills = primaryTags.map(tag =>
-                `<button class="tag-nav-btn text-[10px] font-medium text-g-blue/80 bg-blue-50 hover:bg-blue-100 hover:text-g-blue px-2 py-0.5 rounded-full transition-colors flex-shrink-0"
-                    data-tag="${escHtml(tag)}">#${escHtml(tag)}</button>`
+            const tagPills = aiTagsArr.map(t => t.split(':')[0].toLowerCase()).slice(0, 6).map(tag =>
+                `<button class="tag-nav-btn text-[10px] font-medium text-purple-600 bg-purple-50 hover:bg-purple-100 border border-purple-100 px-2 py-0.5 rounded-full transition-colors flex-shrink-0"
+                    data-tag="${escHtml(tag)}">✦ ${escHtml(tag)}</button>`
             ).join('')
             const clipBtn = `<button class="clip-btn flex-shrink-0 p-1 opacity-0 group-hover:opacity-100 text-g-gray hover:text-g-blue transition-all rounded"
                 data-url="${escHtml(item.url)}"
@@ -637,6 +635,9 @@
             const origTagPillsHtml = tagsArr.map(t => t.split(':')[0].toLowerCase()).map(t =>
                 `<span class="text-[9px] text-g-gray/60 bg-g-border/30 px-1.5 py-0.5 rounded-full">#${escHtml(t)}</span>`
             ).join('')
+            const aiBadge = hasAiData
+                ? `<span class="bg-purple-50 text-purple-600 text-xs font-medium px-1.5 py-0.5 rounded-full border border-purple-100 flex-shrink-0" title="AI enriched">✦</span>`
+                : ''
             const devToggleBtn = hasAiData
                 ? `<button class="dev-toggle text-[9px] font-mono text-amber-400 hover:text-amber-600 bg-amber-50 hover:bg-amber-100 px-1.5 py-0.5 rounded transition-colors flex-shrink-0" title="Show original RSS data">src</button>`
                 : ''
@@ -653,7 +654,7 @@
                        class="flex-1 text-sm text-g-black group-hover:text-g-blue transition-colors leading-snug font-medium min-w-0">
                         ${escHtml(item.title || item.url)}
                     </a>
-                    ${clipBtn}
+                    ${aiBadge}${devToggleBtn}${clipBtn}
                 </div>
                 ${displaySummary ? `<p class="text-xs text-g-gray leading-relaxed line-clamp-2">${escHtml(displaySummary)}</p>` : ''}
                 <div class="flex flex-wrap items-center gap-1.5 mt-0.5">
@@ -661,7 +662,6 @@
                     ${relTime ? `<span class="text-[10px] text-g-gray/70">${escHtml(relTime)}</span>` : ''}
                     ${feedLabel}
                     ${tagPills ? `<span class="text-g-border/60 text-[10px] select-none">·</span>${tagPills}` : ''}
-                    ${devToggleBtn}
                 </div>
                 ${devPanel}
             </div>`

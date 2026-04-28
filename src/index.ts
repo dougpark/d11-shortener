@@ -411,13 +411,13 @@ app.get('/api/v/:dashboardTag', async (c) => {
 
   const result = userId
     ? await c.env.DB.prepare(
-      `SELECT id, url, title, favicon_url, hit_count, tag_list
+      `SELECT id, url, title, short_description, favicon_url, hit_count, tag_list, ai_summary, ai_tags, created_at
          FROM bookmarks
          WHERE user_id = ? AND is_archived = 0 AND tag_list LIKE ?
          ORDER BY created_at ASC`
     ).bind(userId, likePattern).all()
     : await c.env.DB.prepare(
-      `SELECT id, url, title, favicon_url, hit_count, tag_list
+      `SELECT id, url, title, short_description, favicon_url, hit_count, tag_list, ai_summary, ai_tags, created_at
          FROM bookmarks
          WHERE is_public = 1 AND is_archived = 0 AND tag_list LIKE ?
          ORDER BY created_at ASC`
@@ -448,6 +448,10 @@ app.get('/api/v/:dashboardTag', async (c) => {
         title: row.title,
         favicon_url: row.favicon_url,
         hit_count: row.hit_count,
+        short_description: row.short_description ?? null,
+        ai_summary: row.ai_summary ?? null,
+        ai_tags: row.ai_tags ?? null,
+        created_at: row.created_at,
       })
     }
   }
@@ -532,13 +536,13 @@ app.get('/api/e/:dashboardTag', async (c) => {
 
   const result = userId
     ? await c.env.DB.prepare(
-      `SELECT id, url, title, favicon_url, hit_count, tag_list
+      `SELECT id, url, title, short_description, favicon_url, hit_count, tag_list, ai_summary, ai_tags, created_at
          FROM bookmarks
          WHERE user_id = ? AND is_archived = 0 AND tag_list LIKE ?
          ORDER BY created_at ASC`
     ).bind(userId, likePattern).all()
     : await c.env.DB.prepare(
-      `SELECT id, url, title, favicon_url, hit_count, tag_list
+      `SELECT id, url, title, short_description, favicon_url, hit_count, tag_list, ai_summary, ai_tags, created_at
          FROM bookmarks
          WHERE is_public = 1 AND is_archived = 0 AND tag_list LIKE ?
          ORDER BY created_at ASC`
@@ -569,6 +573,11 @@ app.get('/api/e/:dashboardTag', async (c) => {
         title: row.title,
         favicon_url: row.favicon_url,
         hit_count: row.hit_count,
+        tag_list: row.tag_list,
+        short_description: row.short_description,
+        ai_summary: row.ai_summary,
+        ai_tags: row.ai_tags,
+        created_at: row.created_at,
       })
     }
   }
