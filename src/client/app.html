@@ -761,6 +761,10 @@
                         <span class="text-[10px] text-g-gray font-mono ml-auto">posts:write</span>
                         <span class="text-[10px] text-g-gray italic">coming soon</span>
                     </label>
+                    <label class="flex items-center gap-2 text-sm text-g-black cursor-pointer">
+                        <input type="checkbox" id="scope-rss-ingest" class="accent-g-blue"> Ingest RSS posts
+                        <span class="text-[10px] text-g-gray font-mono ml-auto">rss:ingest</span>
+                    </label>
                     <div id="scope-ai-group" class="hidden space-y-2">
                         <label class="flex items-center gap-2 text-sm text-g-black cursor-pointer">
                             <input type="checkbox" id="scope-ai-rss" class="accent-g-blue"> AI: RSS processing
@@ -1749,6 +1753,7 @@
             const scopes = []
             if (qs('#scope-posts-read').checked) scopes.push('posts:read')
             if (qs('#scope-tags-read').checked) scopes.push('tags:read')
+            if (qs('#scope-rss-ingest')?.checked) scopes.push('rss:ingest')
             if (S.user?.is_admin) {
                 if (qs('#scope-ai-rss')?.checked) scopes.push('ai:process:rss')
                 if (qs('#scope-ai-bm')?.checked) scopes.push('ai:process:bookmarks')

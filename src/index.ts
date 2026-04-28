@@ -176,6 +176,7 @@ app.get('/api/preview', authMiddleware, async (c) => {
 app.use('/api/v1/posts', apiTokenMiddleware)
 app.use('/api/v1/posts/*', apiTokenMiddleware)
 app.use('/api/v1/tags', apiTokenMiddleware)
+app.use('/api/v1/rss/*', apiTokenMiddleware)
 app.use('/api/v1/tokens', authMiddleware)
 app.use('/api/v1/tokens/*', authMiddleware)
 

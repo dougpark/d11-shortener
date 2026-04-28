@@ -4,6 +4,7 @@
 //   GET  /api/v1/posts           — apiTokenMiddleware  (read bookmarks)
 //   GET  /api/v1/posts/updated   — apiTokenMiddleware  (last-change timestamp)
 //   GET  /api/v1/tags            — apiTokenMiddleware  (tag list with counts)
+//   POST /api/v1/rss/posts       — apiTokenMiddleware  (ingest scraped RSS items, rss:ingest scope)
 //   GET  /api/v1/tokens          — authMiddleware      (list my API tokens)
 //   POST /api/v1/tokens          — authMiddleware      (create API token)
 //   DELETE /api/v1/tokens/:id    — authMiddleware      (revoke API token)
@@ -19,6 +20,7 @@ import {
     listApiTokens,
     deleteApiToken,
 } from '../db/api_tokens.ts'
+import { extractKeywords, buildTagList } from '../utils/rss.ts'
 
 const v1 = new Hono<{ Bindings: Env; Variables: Variables }>()
 
@@ -190,7 +192,7 @@ v1.post('/tokens', async (c) => {
     if (!name) return c.json({ error: 'name is required' }, 400)
     if (name.length > 100) return c.json({ error: 'name must be 100 characters or fewer' }, 400)
 
-    const validScopes = new Set(['posts:read', 'posts:write', 'tags:read', 'tags:write', 'ai:process', 'ai:process:rss', 'ai:process:bookmarks', '*'])
+    const validScopes = new Set(['posts:read', 'posts:write', 'tags:read', 'tags:write', 'ai:process', 'ai:process:rss', 'ai:process:bookmarks', 'rss:ingest', '*'])
     const scopes: string[] = Array.isArray(body.scopes) && body.scopes.length > 0
         ? body.scopes.filter(s => validScopes.has(s))
         : ['posts:read', 'tags:read']
@@ -290,6 +292,120 @@ v1.delete('/tokens/:id', async (c) => {
     if (!deleted) return c.json({ error: 'token not found' }, 404)
 
     return c.json({ deleted: true })
+})
+
+// ─── POST /api/v1/rss/posts ───────────────────────────────────────────────────
+// Ingest a batch of scraped RSS/web items from an external client (e.g. Gopher).
+//
+// Body: {
+//   source:     string   — URL of the scrape source (e.g. "https://pinboard.in/popular")
+//   scraped_at: string   — ISO 8601 UTC timestamp of the scrape run
+//   items: [
+//     {
+//       url:          string   — required
+//       title:        string   — required
+//       summary:      string?  — optional plain-text description (maps to rss_items.summary)
+//       published_at: string?  — optional ISO 8601 pubDate (maps to rss_items.published_at)
+//       guid:         string?  — optional dedup key; falls back to url
+//     }
+//   ]
+// }
+//
+// Max 50 items per call. Duplicates (by guid/url) are silently ignored.
+// Requires a token with the rss:ingest scope.
+v1.post('/rss/posts', async (c) => {
+    const apiToken = c.get('apiToken')
+    if (!apiToken) return c.json({ error: 'Forbidden', hint: 'Named API token with rss:ingest scope required' }, 403)
+
+    // Scope check
+    let tokenScopes: string[] = []
+    try { tokenScopes = JSON.parse(apiToken.scopes) } catch { /* leave empty */ }
+    if (!tokenScopes.includes('rss:ingest') && !tokenScopes.includes('*')) {
+        return c.json({ error: 'Forbidden', hint: 'Token missing rss:ingest scope' }, 403)
+    }
+
+    let body: unknown
+    try { body = await c.req.json() } catch { return c.json({ error: 'Invalid JSON body' }, 400) }
+    if (typeof body !== 'object' || body === null) return c.json({ error: 'Body must be an object' }, 400)
+
+    const { source, scraped_at, items } = body as Record<string, unknown>
+
+    if (typeof source !== 'string' || !source.trim()) return c.json({ error: 'source is required' }, 400)
+    try { new URL(source) } catch { return c.json({ error: 'source must be a valid URL' }, 400) }
+
+    if (typeof scraped_at !== 'string') return c.json({ error: 'scraped_at is required' }, 400)
+    const scrapedDate = new Date(scraped_at)
+    if (isNaN(scrapedDate.getTime())) return c.json({ error: 'scraped_at must be a valid ISO 8601 datetime' }, 400)
+
+    if (!Array.isArray(items) || items.length === 0) return c.json({ error: 'items must be a non-empty array' }, 400)
+    if (items.length > 50) return c.json({ error: 'Batch too large — max 50 items' }, 400)
+
+    // Validate each item — invalid items are skipped (not fatal), valid ones proceed
+    type InboundItem = { url: string; title: string; summary: string | null; published_at: string | null; guid: string }
+    const validItems: InboundItem[] = []
+    const invalidItems: { index: number; reason: string }[] = []
+
+    for (let i = 0; i < items.length; i++) {
+        const item = items[i]
+        if (typeof item !== 'object' || item === null) { invalidItems.push({ index: i, reason: 'not an object' }); continue }
+        const { url, title, summary, published_at, guid } = item as Record<string, unknown>
+
+        if (typeof url !== 'string' || !url.trim()) { invalidItems.push({ index: i, reason: 'url is required' }); continue }
+        try { new URL(url) } catch { invalidItems.push({ index: i, reason: `invalid url: ${url}` }); continue }
+        if (typeof title !== 'string' || !title.trim()) { invalidItems.push({ index: i, reason: 'title is required' }); continue }
+
+        const pub = published_at !== undefined && published_at !== null && typeof published_at === 'string'
+            ? published_at.trim() : null
+        if (pub && isNaN(new Date(pub).getTime())) { invalidItems.push({ index: i, reason: 'published_at is not a valid date' }); continue }
+
+        validItems.push({
+            url: url.trim(),
+            title: title.trim(),
+            summary: (typeof summary === 'string' ? summary.trim() : null) || null,
+            published_at: pub || null,
+            guid: (typeof guid === 'string' && guid.trim()) ? guid.trim() : url.trim(),
+        })
+    }
+
+    if (validItems.length === 0) return c.json({ error: 'No valid items in batch', invalid: invalidItems }, 400)
+
+    // Auto-upsert rss_feeds row for this source URL
+    await c.env.DB.prepare(
+        `INSERT OR IGNORE INTO rss_feeds (url, name) VALUES (?, ?)`
+    ).bind(source, source).run()
+
+    const feedRow = await c.env.DB.prepare(
+        `SELECT id FROM rss_feeds WHERE url = ? LIMIT 1`
+    ).bind(source).first<{ id: number }>()
+
+    if (!feedRow) return c.json({ error: 'Failed to resolve feed record' }, 500)
+
+    // expires_at = scraped_at + 30 days
+    const expiresAt = new Date(scrapedDate.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString()
+
+    // Build and run batch inserts — guid is the dedup key
+    const stmts = validItems.map(item => {
+        const keywords = extractKeywords(item.title)
+        const tagList = buildTagList([], keywords)
+        return c.env.DB.prepare(
+            `INSERT OR IGNORE INTO rss_items
+               (feed_id, guid, url, title, summary, tag_list, published_at, expires_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+        ).bind(feedRow.id, item.guid, item.url, item.title, item.summary, tagList, item.published_at, expiresAt)
+    })
+
+    const results = await c.env.DB.batch(stmts)
+    const inserted = results.reduce((sum, r) => sum + (r.meta.changes ?? 0), 0)
+
+    return c.json({
+        ok: true,
+        source,
+        scraped_at,
+        received: items.length,
+        inserted,
+        skipped: validItems.length - inserted,
+        invalid: invalidItems.length > 0 ? invalidItems : undefined,
+    })
 })
 
 export default v1
