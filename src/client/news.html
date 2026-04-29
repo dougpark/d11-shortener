@@ -168,7 +168,9 @@
                     ? items.map(renderFeedItem).join('')
                     : `<p class="text-center text-sm text-g-gray py-8">No articles matching \u201c${escHtml(q)}\u201d</p>`
                 const count = qs('#feed-count')
-                if (count) count.textContent = total + ' article' + (total !== 1 ? 's' : '')
+                if (count) count.textContent = items.length < total
+                    ? items.length + ' of ' + total + ' articles'
+                    : total + ' article' + (total !== 1 ? 's' : '')
                 showEl('grid')
                 markAlreadyClipped()
             } catch {
@@ -468,7 +470,11 @@
                     return
                 }
                 feedItems = items
-                qs('#feed-count').textContent = (total ?? items.length) + ' article' + ((total ?? items.length) !== 1 ? 's' : '')
+                const displayed = items.length
+                const dbTotal = total ?? displayed
+                qs('#feed-count').textContent = displayed < dbTotal
+                    ? displayed + ' of ' + dbTotal + ' articles'
+                    : dbTotal + ' article' + (dbTotal !== 1 ? 's' : '')
                 const grid = qs('#card-grid')
                 grid.className = 'flex flex-col gap-2 max-w-2xl mx-auto w-full'
                 grid.removeAttribute('style')
