@@ -618,16 +618,55 @@ app.get('/api/n', async (c) => {
 // ─── News API: GET /api/n/recent — chronological article feed ────────────────
 app.get('/api/n/recent', async (c) => {
   const now = new Date().toISOString()
-  const result = await c.env.DB.prepare(
-    `SELECT r.id, r.url, r.title, r.summary, r.tag_list, r.published_at, r.ai_tags, r.ai_summary,
-            f.name AS feed_name
-       FROM rss_items r
-       JOIN rss_feeds f ON f.id = r.feed_id
-      WHERE r.expires_at > ?
-      ORDER BY r.published_at DESC
-      LIMIT 100`
-  ).bind(now).all()
-  return c.json({ items: result.results })
+  const [result, countResult] = await c.env.DB.batch([
+    c.env.DB.prepare(
+      `SELECT r.id, r.url, r.title, r.summary, r.tag_list, r.published_at, r.ai_tags, r.ai_summary,
+              f.name AS feed_name
+         FROM rss_items r
+         JOIN rss_feeds f ON f.id = r.feed_id
+        WHERE r.expires_at > ?
+        ORDER BY r.published_at DESC
+        LIMIT 100`
+    ).bind(now),
+    c.env.DB.prepare(
+      `SELECT COUNT(*) AS total FROM rss_items WHERE expires_at > ?`
+    ).bind(now),
+  ])
+  const total = (countResult.results[0] as { total: number } | undefined)?.total ?? result.results.length
+  return c.json({ items: result.results, total })
+})
+
+// ─── News API: GET /api/n/search?q= — FTS across all rss_items ───────────────
+app.get('/api/n/search', async (c) => {
+  const raw = (c.req.query('q') || '').trim()
+  if (!raw) return c.json({ items: [], total: 0 })
+
+  // Build a safe FTS5 query: quote each token so special chars don't break the parser
+  const ftsQuery = raw.trim().split(/\s+/)
+    .map(t => '"' + t.replace(/"/g, '""') + '"')
+    .join(' ')
+
+  const now = new Date().toISOString()
+  const [result, countResult] = await c.env.DB.batch([
+    c.env.DB.prepare(
+      `SELECT r.id, r.url, r.title, r.summary, r.tag_list, r.published_at, r.ai_tags, r.ai_summary,
+              f.name AS feed_name
+         FROM rss_items_fts fts
+         JOIN rss_items r ON r.id = fts.rowid
+         JOIN rss_feeds f ON f.id = r.feed_id
+        WHERE rss_items_fts MATCH ? AND r.expires_at > ?
+        ORDER BY r.published_at DESC
+        LIMIT 100`
+    ).bind(ftsQuery, now),
+    c.env.DB.prepare(
+      `SELECT COUNT(*) AS total
+         FROM rss_items_fts fts
+         JOIN rss_items r ON r.id = fts.rowid
+        WHERE rss_items_fts MATCH ? AND r.expires_at > ?`
+    ).bind(ftsQuery, now),
+  ])
+  const total = (countResult.results[0] as { total: number } | undefined)?.total ?? result.results.length
+  return c.json({ items: result.results, total })
 })
 
 // ─── News API: GET /api/n/:tag — items matching tag, grouped by secondary tags

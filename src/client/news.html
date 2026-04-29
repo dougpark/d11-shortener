@@ -136,8 +136,46 @@
         // 'feed' = chronological article list (default); 'topics' = tag pill/tag view
         let currentView = currentTag ? 'topics' : 'feed'
         let feedItems = []
+        let searchDebounceTimer = null
 
-        function headerSearch(value) { filterCards(value) }
+        function headerSearch(value) {
+            if (currentView !== 'feed') { filterCards(value); return }
+            clearTimeout(searchDebounceTimer)
+            const q = value.trim()
+            if (!q) {
+                // Restore full feed from cache
+                qs('#card-grid').innerHTML = feedItems.map(renderFeedItem).join('')
+                const count = qs('#feed-count')
+                if (count) count.textContent = feedItems.length + ' article' + (feedItems.length !== 1 ? 's' : '')
+                markAlreadyClipped()
+                return
+            }
+            searchDebounceTimer = setTimeout(() => searchFeed(q), 300)
+        }
+
+        async function searchFeed(q) {
+            showEl('loading')
+            hideEl('grid')
+            try {
+                const res = await fetch('/api/n/search?q=' + encodeURIComponent(q))
+                hideEl('loading')
+                if (!res.ok) { showEl('grid'); return }
+                const { items, total } = await res.json()
+                const grid = qs('#card-grid')
+                grid.className = 'flex flex-col gap-2 max-w-2xl mx-auto w-full'
+                grid.removeAttribute('style')
+                grid.innerHTML = items.length
+                    ? items.map(renderFeedItem).join('')
+                    : `<p class="text-center text-sm text-g-gray py-8">No articles matching \u201c${escHtml(q)}\u201d</p>`
+                const count = qs('#feed-count')
+                if (count) count.textContent = total + ' article' + (total !== 1 ? 's' : '')
+                showEl('grid')
+                markAlreadyClipped()
+            } catch {
+                hideEl('loading')
+                showEl('grid')
+            }
+        }
 
         function syncUrl(push = false) {
             const url = currentTag ? '/n/' + encodeURIComponent(currentTag) : '/n'
@@ -422,7 +460,7 @@
                 const res = await fetch('/api/n/recent')
                 hideEl('loading')
                 if (!res.ok) { showEl('empty'); return }
-                const { items } = await res.json()
+                const { items, total } = await res.json()
                 if (!items || items.length === 0) {
                     qs('#empty-headline').textContent = 'No news yet'
                     qs('#empty-sub').textContent = 'RSS feeds are ingested every 30 minutes — check back soon.'
@@ -430,7 +468,7 @@
                     return
                 }
                 feedItems = items
-                qs('#feed-count').textContent = items.length + ' article' + (items.length !== 1 ? 's' : '')
+                qs('#feed-count').textContent = (total ?? items.length) + ' article' + ((total ?? items.length) !== 1 ? 's' : '')
                 const grid = qs('#card-grid')
                 grid.className = 'flex flex-col gap-2 max-w-2xl mx-auto w-full'
                 grid.removeAttribute('style')

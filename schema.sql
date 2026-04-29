@@ -151,6 +151,38 @@ CREATE INDEX IF NOT EXISTS idx_rss_items_feed_id         ON rss_items (feed_id);
 CREATE INDEX IF NOT EXISTS idx_rss_items_tag_list        ON rss_items (tag_list);
 CREATE INDEX IF NOT EXISTS idx_rss_items_ai_processed_at ON rss_items (ai_processed_at);
 
+-- ─── RSS Items Full-Text Search (FTS5) ───────────────────────────────────────
+-- Content table mirrors rss_items; rowid = rss_items.id.
+-- Searches across title, summary, ai_summary, and tag_list.
+CREATE VIRTUAL TABLE IF NOT EXISTS rss_items_fts USING fts5(
+  title,
+  summary,
+  ai_summary,
+  tag_list,
+  content=rss_items,
+  content_rowid=id
+);
+
+CREATE TRIGGER IF NOT EXISTS rss_items_fts_ai
+  AFTER INSERT ON rss_items BEGIN
+    INSERT INTO rss_items_fts(rowid, title, summary, ai_summary, tag_list)
+    VALUES (new.id, new.title, new.summary, new.ai_summary, new.tag_list);
+  END;
+
+CREATE TRIGGER IF NOT EXISTS rss_items_fts_ad
+  AFTER DELETE ON rss_items BEGIN
+    INSERT INTO rss_items_fts(rss_items_fts, rowid, title, summary, ai_summary, tag_list)
+    VALUES ('delete', old.id, old.title, old.summary, old.ai_summary, old.tag_list);
+  END;
+
+CREATE TRIGGER IF NOT EXISTS rss_items_fts_au
+  AFTER UPDATE ON rss_items BEGIN
+    INSERT INTO rss_items_fts(rss_items_fts, rowid, title, summary, ai_summary, tag_list)
+    VALUES ('delete', old.id, old.title, old.summary, old.ai_summary, old.tag_list);
+    INSERT INTO rss_items_fts(rowid, title, summary, ai_summary, tag_list)
+    VALUES (new.id, new.title, new.summary, new.ai_summary, new.tag_list);
+  END;
+
 -- ─── Full-Text Search (FTS5) ──────────────────────────────────────────────────
 -- Content table mirrors bookmarks; rowid = bookmarks.id.
 -- Searches across title, short_description, ai_summary, tag_list, and url.
