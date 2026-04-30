@@ -419,6 +419,7 @@ app.get('/api/ft/queue', async (c) => {
         WHERE b.is_archived = 0
           AND (b.is_public = 1 OR u.ai_allow_private = 1)
           ${notFetched}
+          AND b.created_at >= '2023-01-01'
         ORDER BY b.created_at DESC
         LIMIT ? OFFSET ?`
     ).bind(limit, offset),
@@ -428,7 +429,8 @@ app.get('/api/ft/queue', async (c) => {
          JOIN users u ON u.id = b.user_id
         WHERE b.is_archived = 0
           AND (b.is_public = 1 OR u.ai_allow_private = 1)
-          ${notFetched}`
+          ${notFetched}
+          AND b.created_at >= '2023-01-01'`
     ),
   ])
 
